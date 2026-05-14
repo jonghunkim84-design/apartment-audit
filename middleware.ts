@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback']
+
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // 공개 경로는 세션 갱신만 하고 통과
+  const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -23,8 +30,12 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // 세션 갱신 (만료 방지)
-  await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // 보호된 경로에 미인증 접근 시 로그인으로 이동
+  if (!isPublic && !user) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 
   return supabaseResponse
 }
