@@ -41,8 +41,12 @@ export async function logout() {
 
 export async function requestPasswordReset(email: string) {
   const supabase = await createClient()
+  // BOM 등 비ASCII 문자 제거 후 사용
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://apartment-audit-system.vercel.app')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim()
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/auth/callback?next=/reset-password`,
+    redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
   })
   if (error) return { error: error.message }
   return { success: true }
