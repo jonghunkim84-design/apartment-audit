@@ -2,10 +2,21 @@ import { logout } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
 import { Button } from '@/components/ui/button'
+import { redirect } from 'next/navigation'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('apartment_complex_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile?.apartment_complex_id) redirect('/setup')
 
   return (
     <div className="flex h-screen overflow-hidden bg-muted/40">

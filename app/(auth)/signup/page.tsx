@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const schema = z.object({
   fullName: z.string().min(2, '이름은 2자 이상이어야 합니다'),
+  apartmentName: z.string().min(2, '아파트 단지명은 2자 이상이어야 합니다'),
   email: z.string().email('올바른 이메일을 입력해주세요'),
   password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다'),
   confirmPassword: z.string(),
@@ -36,7 +37,7 @@ export default function SignupPage() {
   const onSubmit = (data: FormValues) => {
     setServerError(null)
     startTransition(async () => {
-      const result = await signup(data.fullName, data.email, data.password)
+      const result = await signup(data.fullName, data.email, data.password, data.apartmentName)
       if (result?.error) setServerError(result.error)
       if (result?.success) setSuccessMessage(result.success)
     })
@@ -92,6 +93,14 @@ export default function SignupPage() {
             <Input id="fullName" placeholder="홍길동" autoComplete="name" {...register('fullName')} />
             {errors.fullName && (
               <p className="text-xs text-destructive">{errors.fullName.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="apartmentName" className="text-sm font-medium">아파트 단지명</label>
+            <Input id="apartmentName" placeholder="예: 래미안 한강아파트" {...register('apartmentName')} />
+            {errors.apartmentName && (
+              <p className="text-xs text-destructive">{errors.apartmentName.message}</p>
             )}
           </div>
 
