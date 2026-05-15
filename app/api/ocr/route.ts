@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
 
       if (duplicates && duplicates.length > 0) {
         tags.push('[중복가능]')
-        forcedConfidence = 0.5
+        forcedConfidence = 0.7
 
         // 이중결제: 첫 번째 건에 [원본] 태그 추가
         const original = duplicates[0]
