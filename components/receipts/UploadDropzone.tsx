@@ -185,7 +185,7 @@ export function UploadDropzone({ onSuccess }: { onSuccess?: () => void } = {}) {
             <div className="text-center">
               <p className="text-sm font-medium">OCR 분석 중…</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Google Vision → Claude AI 순서로 처리 중입니다
+                Gemini AI로 분석 중입니다
               </p>
             </div>
           </>

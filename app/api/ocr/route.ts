@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
 
-// ── Gemini multimodal: 이미지 → OCR 텍스트 + 13요소 파싱 (한 번에) ────────
+// ── 타입 ──────────────────────────────────────────────────────────────────────
 
 interface ParsedReceipt {
   date: string | null
@@ -26,10 +26,9 @@ interface GeminiResult {
   parsed: ParsedReceipt
 }
 
-async function analyzeReceiptImage(
-  base64: string,
-  mimeType: string
-): Promise<GeminiResult> {
+// ── Gemini 멀티모달: 이미지 → OCR 텍스트 + 13요소 파싱 (한 번에) ─────────────
+
+async function analyzeReceiptImage(base64: string, mimeType: string): Promise<GeminiResult> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
@@ -69,24 +68,22 @@ async function analyzeReceiptImage(
   return JSON.parse(text) as GeminiResult
 }
 
-// ── CoV-1: supply_amount + vat = total ────────────────────────────────────
+// ── CoV-1: supply_amount + vat = total ────────────────────────────────────────
 
 function covMismatch(p: ParsedReceipt): boolean {
   if (p.supply_amount === null || p.vat === null || p.total === null) return false
   return Math.abs(p.supply_amount + p.vat - p.total) > 1
 }
 
-// ── Confidence → status ───────────────────────────────────────────────────
+// ── Confidence → status ───────────────────────────────────────────────────────
 
-function resolveStatus(
-  confidence: number
-): 'approved' | 'manual_review' | 'rejected' {
+function resolveStatus(confidence: number): 'approved' | 'manual_review' | 'rejected' {
   if (confidence >= 0.85) return 'approved'
   if (confidence >= 0.65) return 'manual_review'
   return 'rejected'
 }
 
-// ── Route handler ──────────────────────────────────────────────────────────
+// ── Route handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,10 +109,7 @@ export async function POST(request: NextRequest) {
     if (!file) return NextResponse.json({ error: '파일이 없습니다.' }, { status: 400 })
 
     if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { error: '이미지 파일만 업로드 가능합니다.' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '이미지 파일만 업로드 가능합니다.' }, { status: 400 })
     }
 
     const buffer = Buffer.from(await file.arrayBuffer())
@@ -199,7 +193,10 @@ export async function POST(request: NextRequest) {
     console.error('[OCR route]', err)
     const msg = err instanceof Error ? err.message : String(err)
     if (msg.includes('429') || msg.toLowerCase().includes('quota') || msg.toLowerCase().includes('rate')) {
-      return NextResponse.json({ error: 'AI 요청 한도 초과입니다. 잠시 후 다시 시도해 주세요.' }, { status: 429 })
+      return NextResponse.json(
+        { error: 'AI 요청 한도 초과입니다. 잠시 후 다시 시도해 주세요.' },
+        { status: 429 }
+      )
     }
     return NextResponse.json({ error: '처리 중 오류가 발생했습니다.' }, { status: 500 })
   }
