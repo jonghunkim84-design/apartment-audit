@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+
+export const maxDuration = 60
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createClient } from '@/lib/supabase/server'
 import type { Json } from '@/types/database'
@@ -59,12 +61,13 @@ async function analyzeReceiptImage(base64: string, mimeType: string): Promise<Ge
     { text: prompt },
   ])
 
-  // 코드 블록, 앞뒤 공백, JSON 시작 전 불필요한 텍스트 제거
+  // 첫 번째 { 와 마지막 } 사이를 추출 (코드블록·설명 텍스트 방어)
   const raw = result.response.text()
-  const text = raw
-    .replace(/^[\s\S]*?(\{)/m, '$1')   // 첫 { 이전 텍스트 제거
-    .replace(/\}\s*[\s\S]*$/, '}')     // 마지막 } 이후 텍스트 제거
-    .trim()
+  const first = raw.indexOf('{')
+  const last = raw.lastIndexOf('}')
+  const text = first !== -1 && last > first
+    ? raw.slice(first, last + 1)
+    : raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
   try {
     return JSON.parse(text) as GeminiResult
