@@ -15,8 +15,23 @@ const KR_HOLIDAYS = new Set([
   '2026-10-03', '2026-10-09', '2026-12-25',
 ])
 
+// ── 정책 한도 (원 단위) ───────────────────────────────────────────────────────
+
+const LIMITS: Record<string, number> = {
+  식대: 30_000,
+  식비: 30_000,
+  접대비: 50_000,
+  출장비: 100_000,
+  DEFAULT: 100_000,
+}
+
+function getCategoryLimit(category: string | null): number {
+  return LIMITS[category ?? ''] ?? LIMITS.DEFAULT
+}
+
+// ── 금지업종 키워드 ───────────────────────────────────────────────────────────
+
 const PROHIBITED_KEYWORDS = ['노래방', '유흥', '룸살롱', '카지노']
-const MEAL_LIMIT = 30_000
 
 // ── 타입 ──────────────────────────────────────────────────────────────────────
 
@@ -33,7 +48,6 @@ function kstHour(utcIso: string): number {
   return new Date(new Date(utcIso).getTime() + 9 * 3_600_000).getUTCHours()
 }
 
-// OCR 원문에서 HH:MM 패턴 추출
 function extractHourFromRaw(raw: string | null): number | null {
   if (!raw) return null
   const m = raw.match(/\b([01]?\d|2[0-3]):([0-5]\d)/)
@@ -85,38 +99,51 @@ export async function POST(request: NextRequest) {
     }> = []
 
     // ── 필터 1: 쪼개기 탐지 ─────────────────────────────────────────────────────
-    // 같은 business_no, 7일 이내, 3건 이상이면 쪼개기 의심
+    // 같은 business_no, 7일 이내, 금액이 카테고리 한도의 80~95%인 건이 3개 이상
     if (receipt.business_number && receipt.receipt_date) {
       const base = new Date(receipt.receipt_date).getTime()
       const from = new Date(base - 7 * 86_400_000).toISOString().slice(0, 10)
       const to   = new Date(base + 7 * 86_400_000).toISOString().slice(0, 10)
+
+      const categoryLimit = getCategoryLimit(receipt.merchant_category)
+      const limitLow  = categoryLimit * 0.80
+      const limitHigh = categoryLimit * 0.95
 
       const { data: related } = await supabase
         .from('receipts')
         .select('id, amount, receipt_date')
         .eq('business_number', receipt.business_number)
         .eq('apartment_complex_id', profile.apartment_complex_id)
-        .neq('id', receiptId)
         .gte('receipt_date', from)
         .lte('receipt_date', to)
 
-      const relatedCount = (related?.length ?? 0) + 1  // 현재 건 포함
-      const isViolation = relatedCount >= 3
+      // 한도의 80~95% 범위에 해당하는 건만 카운트 (현재 건 포함)
+      const suspiciousCount = (related ?? []).filter(r => {
+        const amt = r.amount ?? 0
+        return amt >= limitLow && amt <= limitHigh
+      }).length
+
+      const isViolation = suspiciousCount >= 3
 
       checks.push({
         receipt_id: receiptId,
         check_type: 'split_payment',
         is_violation: isViolation,
-        details: { 관련_건수: relatedCount, 조회_기간_일: 7 } as Json,
+        details: {
+          관련_건수: suspiciousCount,
+          조회_기간_일: 7,
+          한도: categoryLimit,
+          의심_범위: `${limitLow}~${limitHigh}원`,
+        } as Json,
       })
 
       if (isViolation) {
-        flags.push({ type: '쪼개기의심', 관련_건수: relatedCount })
+        flags.push({ type: '쪼개기의심', 관련_건수: suspiciousCount })
       }
     }
 
     // ── 필터 2: 시간대 이상 ───────────────────────────────────────────────────
-    // 공휴일 또는 23:00–05:00 거래
+    // 공휴일 또는 KST 23:00–05:00 거래
     const isHoliday = receipt.receipt_date ? KR_HOLIDAYS.has(receipt.receipt_date) : false
     const txHour = extractHourFromRaw(receipt.ocr_raw_text) ?? kstHour(receipt.created_at)
     const isOffHour = txHour >= 23 || txHour < 5
@@ -134,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 필터 3: 금지업종 ────────────────────────────────────────────────────────
-    // 금지 키워드 포함 시 flags 추가 + status → manual_review
+    // 금지 키워드 포함 시 flags 추가 → FLAGGED
     const merchantName = receipt.merchant_name ?? ''
     const matchedKeyword = PROHIBITED_KEYWORDS.find(k => merchantName.includes(k)) ?? null
     const isProhibited = matchedKeyword !== null
@@ -151,22 +178,68 @@ export async function POST(request: NextRequest) {
     }
 
     // ── 필터 4: 한도초과 ────────────────────────────────────────────────────────
-    // 식비(식대) 카테고리이고 총액 > 30,000원
     const category = receipt.merchant_category ?? ''
     const amount = receipt.amount ?? 0
-    const isMealCategory = category === '식비' || category === '식대'
-    const isOverLimit = isMealCategory && amount > MEAL_LIMIT
+    const limitViolations: PolicyFlag[] = []
+
+    // 4-1: 식대/식비 — 건당 30,000원 초과
+    if ((category === '식비' || category === '식대') && amount > LIMITS['식대']) {
+      limitViolations.push({
+        type: '한도초과', 항목: '식대',
+        한도: LIMITS['식대'], 실제금액: amount,
+      })
+    }
+
+    // 4-2: 접대비 — 건당 50,000원 초과
+    if (category === '접대비' && amount > LIMITS['접대비']) {
+      limitViolations.push({
+        type: '한도초과', 항목: '접대비',
+        한도: LIMITS['접대비'], 실제금액: amount,
+      })
+    }
+
+    // 4-3: 출장비 — 동일 날짜 일당 합산 100,000원 초과
+    if (category === '출장비' && receipt.receipt_date) {
+      const { data: sameDayTravel } = await supabase
+        .from('receipts')
+        .select('amount')
+        .eq('merchant_category', '출장비')
+        .eq('apartment_complex_id', profile.apartment_complex_id)
+        .eq('receipt_date', receipt.receipt_date)
+
+      const dailyTotal = (sameDayTravel ?? []).reduce((sum, r) => sum + (r.amount ?? 0), 0)
+
+      if (dailyTotal > LIMITS['출장비']) {
+        limitViolations.push({
+          type: '한도초과', 항목: '출장비',
+          한도: LIMITS['출장비'], 일당합계: dailyTotal,
+        })
+      }
+    }
+
+    // 사유서 첨부 여부 확인 (review_note에 "사유서" 포함 시 첨부로 간주)
+    // 미첨부 시 → FLAGGED
+    const isLimitViolation = limitViolations.length > 0
+    if (isLimitViolation) {
+      const hasSayuseo = (receipt.review_note ?? '').includes('사유서')
+      const enrichedFlags = limitViolations.map(f => ({
+        ...f,
+        사유서첨부: hasSayuseo,
+        ...(!hasSayuseo && { 비고: '사유서 미첨부 — 검수 필요' }),
+      }))
+      flags.push(...enrichedFlags)
+    }
 
     checks.push({
       receipt_id: receiptId,
       check_type: 'limit_exceeded',
-      is_violation: isOverLimit,
-      details: { 카테고리: category, 금액: amount, 한도: MEAL_LIMIT } as Json,
+      is_violation: isLimitViolation,
+      details: {
+        카테고리: category,
+        금액: amount,
+        위반사항: limitViolations,
+      } as Json,
     })
-
-    if (isOverLimit) {
-      flags.push({ type: '한도초과', 항목: '식대', 한도: MEAL_LIMIT, 실제금액: amount })
-    }
 
     // ── receipt_policy_checks 저장 (기존 기록 교체) ───────────────────────────
     await supabase
@@ -179,12 +252,10 @@ export async function POST(request: NextRequest) {
     }
 
     // ── receipts.policy_flags + status 업데이트 ────────────────────────────────
-    const hasViolation = flags.length > 0
-    const newStatus = isProhibited || hasViolation
-      ? ('manual_review' as const)
-      : receipt.status
+    // flags가 1개라도 있으면 → manual_review (FLAGGED)
+    const hasAnyFlag = flags.length > 0
+    const newStatus = hasAnyFlag ? ('manual_review' as const) : receipt.status
 
-    // 기존 플래그 중 이번 검사 유형과 겹치지 않는 것만 유지 후 병합
     const existingFlags: PolicyFlag[] = Array.isArray(receipt.policy_flags)
       ? (receipt.policy_flags as PolicyFlag[])
       : []
@@ -198,7 +269,7 @@ export async function POST(request: NextRequest) {
       .from('receipts')
       .update({
         policy_flags: mergedFlags.length > 0 ? (mergedFlags as unknown as Json) : null,
-        ...(hasViolation && { status: newStatus }),
+        status: newStatus,
       })
       .eq('id', receiptId)
 
