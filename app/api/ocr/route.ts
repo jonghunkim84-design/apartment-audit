@@ -95,6 +95,48 @@ function covMismatch(p: ParsedReceipt): boolean {
   return Math.abs(p.supply_amount + p.vat - p.total) > 1
 }
 
+// ── CoV-2: 흐림·잘림·해상도 부족 패턴 탐지 ──────────────────────────────────
+
+const BLUR_PATTERNS = [
+  /[?□■◻◼▪▫]{3,}/,
+  /\.{5,}/,
+  /_{4,}/,
+  /판독\s*불가/,
+  /흐림|번짐|불명확/,
+]
+
+function covBlur(rawText: string, parsed: ParsedReceipt): { detected: boolean; blurFields: string[] } {
+  const hasBlurIndicator = BLUR_PATTERNS.some(re => re.test(rawText))
+  const tooShort = rawText.trim().replace(/\s/g, '').length < 30
+
+  const blurFields: string[] = []
+  if (parsed.merchant === null) blurFields.push('가맹점명')
+  if (parsed.date === null) blurFields.push('날짜')
+  if (parsed.total === null) blurFields.push('합계금액')
+
+  return {
+    detected: hasBlurIndicator || tooShort || blurFields.length >= 2,
+    blurFields,
+  }
+}
+
+// ── EXIF 메타데이터 확인 (캡처화면 탐지) ─────────────────────────────────────
+
+function hasExifMetadata(buffer: Buffer, mimeType: string): boolean {
+  if (mimeType === 'image/png') {
+    const header = buffer.slice(0, 256).toString('binary')
+    return header.includes('tEXt') || header.includes('iTXt') || header.includes('eXIf')
+  }
+  if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
+    const limit = Math.min(buffer.length - 1, 512)
+    for (let i = 2; i < limit; i++) {
+      if (buffer[i] === 0xFF && buffer[i + 1] === 0xE1) return true
+    }
+    return false
+  }
+  return true
+}
+
 // ── Confidence → status ───────────────────────────────────────────────────────
 
 function resolveStatus(confidence: number): 'approved' | 'manual_review' | 'rejected' {
@@ -158,7 +200,72 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // CoV-1 검산
+    const tags: string[] = []
+    let confidenceAdj = 0
+
+    // ── CoV-2: 흐림·잘림·해상도 부족 ─────────────────────────────────────────
+    const blur = covBlur(raw_text, parsed)
+    if (blur.detected) {
+      tags.push(blur.blurFields.length > 0 ? `[불명: ${blur.blurFields.join(', ')}]` : '[불명]')
+      confidenceAdj -= 0.3
+    }
+
+    // ── 엣지 1: 간이영수증 ────────────────────────────────────────────────────
+    if (!parsed.business_no) {
+      tags.push('[간이영수증]')
+      parsed.vat = 0
+    }
+
+    // ── 엣지 2: 해외영수증 ────────────────────────────────────────────────────
+    if (/\b(USD|EUR|JPY|CNY|GBP|AUD)\b/i.test(raw_text) || (parsed.currency && parsed.currency !== 'KRW')) {
+      tags.push('[환율적용필요]')
+      confidenceAdj -= 0.1
+    }
+
+    // ── 엣지 3: 카드전표 ──────────────────────────────────────────────────────
+    if (/전표|이용대금명세서/.test(raw_text)) {
+      tags.push('[카드전표-부가세별도확인]')
+    }
+
+    // ── 엣지 4: 캡처화면 (EXIF 메타데이터 부재) ──────────────────────────────
+    if (!hasExifMetadata(buffer, file.type)) {
+      tags.push('[캡처화면-메타부재]')
+      confidenceAdj -= 0.05
+    }
+
+    // ── CoV-3 + 엣지 5: 중복/이중결제 탐지 ──────────────────────────────────
+    let forcedConfidence: number | null = null
+    if (parsed.date && parsed.merchant && parsed.total !== null) {
+      const { data: duplicates } = await supabase
+        .from('receipts')
+        .select('id, review_note')
+        .eq('apartment_complex_id', profile.apartment_complex_id)
+        .eq('receipt_date', parsed.date)
+        .eq('merchant_name', parsed.merchant)
+        .eq('amount', parsed.total)
+
+      if (duplicates && duplicates.length > 0) {
+        tags.push('[중복가능]')
+        forcedConfidence = 0.5
+
+        // 이중결제: 첫 번째 건에 [원본] 태그 추가
+        const original = duplicates[0]
+        const existingNote = original.review_note ?? ''
+        if (!existingNote.includes('[원본]')) {
+          await supabase
+            .from('receipts')
+            .update({ review_note: `${existingNote} [원본]`.trim() })
+            .eq('id', original.id)
+        }
+      }
+    }
+
+    // notes 병합
+    if (tags.length > 0) {
+      parsed.notes = [parsed.notes, ...tags].filter(Boolean).join(' ')
+    }
+
+    // ── CoV-1 검산 ────────────────────────────────────────────────────────────
     const hasCovMismatch = covMismatch(parsed)
     const policyFlags: Record<string, unknown> = {}
     if (hasCovMismatch) {
@@ -168,9 +275,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const finalConfidence = hasCovMismatch
-      ? Math.min(parsed.confidence, 0.79)
-      : parsed.confidence
+    // ── 최종 confidence 계산 ──────────────────────────────────────────────────
+    // 우선순위: CoV-3 강제값 > CoV-2+엣지 누적 조정 > CoV-1 상한
+    let finalConfidence: number
+    if (forcedConfidence !== null) {
+      finalConfidence = forcedConfidence
+    } else {
+      finalConfidence = Math.max(0, Math.min(1, parsed.confidence + confidenceAdj))
+    }
+    if (hasCovMismatch) finalConfidence = Math.min(finalConfidence, 0.79)
     const status = resolveStatus(finalConfidence)
 
     const { data: receipt, error: insertError } = await supabase
