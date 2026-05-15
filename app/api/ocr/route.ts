@@ -59,13 +59,29 @@ async function analyzeReceiptImage(base64: string, mimeType: string): Promise<Ge
     { text: prompt },
   ])
 
-  const text = result.response
-    .text()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/, '')
+  // 코드 블록, 앞뒤 공백, JSON 시작 전 불필요한 텍스트 제거
+  const raw = result.response.text()
+  const text = raw
+    .replace(/^[\s\S]*?(\{)/m, '$1')   // 첫 { 이전 텍스트 제거
+    .replace(/\}\s*[\s\S]*$/, '}')     // 마지막 } 이후 텍스트 제거
     .trim()
 
-  return JSON.parse(text) as GeminiResult
+  try {
+    return JSON.parse(text) as GeminiResult
+  } catch {
+    console.error('[OCR route] JSON 파싱 실패, 원문:', raw.slice(0, 300))
+    // 파싱 실패 시 raw_text는 보존하고 parsed는 기본값으로 반환
+    return {
+      raw_text: raw,
+      parsed: {
+        date: null, merchant: null, business_no: null,
+        supply_amount: null, vat: null, total: null,
+        payment_method: null, card_company: null, approval_no: null,
+        currency: 'KRW', category: null, confidence: 0.3,
+        notes: 'AI 응답 파싱 실패 — 수동 검수 필요',
+      },
+    }
+  }
 }
 
 // ── CoV-1: supply_amount + vat = total ────────────────────────────────────────
