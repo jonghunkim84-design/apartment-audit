@@ -31,7 +31,8 @@ interface GeminiResult {
 // ── Gemini 멀티모달: 이미지 → OCR 텍스트 + 13요소 파싱 (한 번에) ─────────────
 
 async function analyzeReceiptImage(base64: string, mimeType: string): Promise<GeminiResult> {
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY!)
+  const apiKey = (process.env.GOOGLE_GEMINI_API_KEY ?? '').replace(/^﻿/, '').trim()
+  const genAI = new GoogleGenerativeAI(apiKey)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const prompt = `이 영수증 이미지를 분석하세요. 코드 블록 없이 JSON 객체만 출력하세요.
