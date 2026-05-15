@@ -193,6 +193,128 @@ export type Database = {
           },
         ]
       }
+      audit_findings: {
+        Row: {
+          apartment_complex_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          receipt_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          apartment_complex_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          receipt_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          apartment_complex_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          receipt_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_findings_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_findings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_findings_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_findings_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          file_id: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          receipt_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          file_id: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          receipt_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          file_id?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          receipt_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           apartment_complex_id: string
@@ -581,6 +703,9 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      jwt_ext_period_end: { Args: never; Returns: string }
+      jwt_ext_period_start: { Args: never; Returns: string }
+      jwt_user_role: { Args: never; Returns: string }
     }
     Enums: {
       anomaly_detection_type:
