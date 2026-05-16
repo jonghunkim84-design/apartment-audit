@@ -1,6 +1,7 @@
 import { logout } from '@/lib/actions/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Sidebar } from '@/components/layout/sidebar'
+import { NotificationBell } from '@/components/layout/NotificationBell'
 import { Button } from '@/components/ui/button'
 import { redirect } from 'next/navigation'
 
@@ -23,6 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-14 shrink-0 border-b bg-background flex items-center justify-end px-6 gap-3">
+          <NotificationBell userId={user.id} />
           <span className="text-sm text-muted-foreground">{user?.email}</span>
           <form action={logout}>
             <Button variant="ghost" size="sm" type="submit">로그아웃</Button>

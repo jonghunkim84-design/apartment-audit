@@ -320,6 +320,7 @@ export type Database = {
           apartment_complex_id: string
           business_number: string | null
           contract_amount: number
+          contract_date: string | null
           contract_end: string | null
           contract_start: string | null
           contract_type: Database["public"]["Enums"]["contract_type"]
@@ -337,6 +338,7 @@ export type Database = {
           apartment_complex_id: string
           business_number?: string | null
           contract_amount: number
+          contract_date?: string | null
           contract_end?: string | null
           contract_start?: string | null
           contract_type?: Database["public"]["Enums"]["contract_type"]
@@ -354,6 +356,7 @@ export type Database = {
           apartment_complex_id?: string
           business_number?: string | null
           contract_amount?: number
+          contract_date?: string | null
           contract_end?: string | null
           contract_start?: string | null
           contract_type?: Database["public"]["Enums"]["contract_type"]
@@ -384,8 +387,72 @@ export type Database = {
           },
         ]
       }
+      long_term_repair: {
+        Row: {
+          id: string
+          apartment_complex_id: string
+          year: number
+          month: number | null
+          planned_amount: number
+          actual_amount: number
+          balance: number
+          description: string | null
+          file_url: string | null
+          is_unplanned: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          apartment_complex_id: string
+          year: number
+          month?: number | null
+          planned_amount?: number
+          actual_amount?: number
+          balance?: number
+          description?: string | null
+          file_url?: string | null
+          is_unplanned?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          apartment_complex_id?: string
+          year?: number
+          month?: number | null
+          planned_amount?: number
+          actual_amount?: number
+          balance?: number
+          description?: string | null
+          file_url?: string | null
+          is_unplanned?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "long_term_repair_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "long_term_repair_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       misc_income: {
         Row: {
+          account_number: string | null
           amount: number
           apartment_complex_id: string
           category: Database["public"]["Enums"]["misc_income_category"]
@@ -395,9 +462,13 @@ export type Database = {
           evidence_url: string | null
           id: string
           income_date: string
+          payment_status: string
+          received_at: string | null
           verified_by: string | null
+          waiver_rate: number | null
         }
         Insert: {
+          account_number?: string | null
           amount: number
           apartment_complex_id: string
           category: Database["public"]["Enums"]["misc_income_category"]
@@ -407,9 +478,13 @@ export type Database = {
           evidence_url?: string | null
           id?: string
           income_date: string
+          payment_status?: string
+          received_at?: string | null
           verified_by?: string | null
+          waiver_rate?: number | null
         }
         Update: {
+          account_number?: string | null
           amount?: number
           apartment_complex_id?: string
           category?: Database["public"]["Enums"]["misc_income_category"]
@@ -419,7 +494,10 @@ export type Database = {
           evidence_url?: string | null
           id?: string
           income_date?: string
+          payment_status?: string
+          received_at?: string | null
           verified_by?: string | null
+          waiver_rate?: number | null
         }
         Relationships: [
           {
@@ -439,6 +517,60 @@ export type Database = {
           {
             foreignKeyName: "misc_income_verified_by_fkey"
             columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          apartment_complex_id: string
+          category: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          reference_id: string | null
+          severity: Database["public"]["Enums"]["notification_severity"]
+          title: string
+          user_id: string
+        }
+        Insert: {
+          apartment_complex_id: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          reference_id?: string | null
+          severity?: Database["public"]["Enums"]["notification_severity"]
+          title: string
+          user_id: string
+        }
+        Update: {
+          apartment_complex_id?: string
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          reference_id?: string | null
+          severity?: Database["public"]["Enums"]["notification_severity"]
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -630,6 +762,69 @@ export type Database = {
           },
         ]
       }
+      reconsideration_requests: {
+        Row: {
+          apartment_complex_id: string
+          content: string
+          created_at: string
+          created_by: string
+          document_url: string | null
+          id: string
+          law_reference: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          sent_at: string
+          status: Database["public"]["Enums"]["reconsideration_status"]
+          updated_at: string
+        }
+        Insert: {
+          apartment_complex_id: string
+          content: string
+          created_at?: string
+          created_by: string
+          document_url?: string | null
+          id?: string
+          law_reference: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sent_at?: string
+          status?: Database["public"]["Enums"]["reconsideration_status"]
+          updated_at?: string
+        }
+        Update: {
+          apartment_complex_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          document_url?: string | null
+          id?: string
+          law_reference?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sent_at?: string
+          status?: Database["public"]["Enums"]["reconsideration_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reconsideration_requests_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reconsideration_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           apartment_complex_id: string
@@ -716,13 +911,15 @@ export type Database = {
       checklist_item_status: "pending" | "pass" | "fail" | "na"
       checklist_status: "draft" | "in_progress" | "completed"
       contract_status: "active" | "expired" | "terminated"
-      contract_type: "service" | "construction" | "supply" | "other"
+      contract_type: "service" | "construction" | "supply" | "other" | "bid" | "private_contract"
       misc_income_category:
+        | "recycling"
         | "parking"
         | "rental"
         | "interest"
         | "penalty"
         | "other"
+      notification_severity: "INFO" | "WARNING" | "CRITICAL"
       policy_check_type:
         | "split_payment"
         | "time_restriction"
@@ -734,6 +931,7 @@ export type Database = {
         | "manual_review"
         | "approved"
         | "rejected"
+      reconsideration_status: "SENT" | "RECEIVED" | "RESOLVED" | "ESCALATED"
       report_status: "draft" | "review" | "published"
       report_type: "monthly" | "quarterly" | "annual" | "special"
       severity_level: "low" | "medium" | "high"
@@ -874,8 +1072,9 @@ export const Constants = {
       checklist_item_status: ["pending", "pass", "fail", "na"],
       checklist_status: ["draft", "in_progress", "completed"],
       contract_status: ["active", "expired", "terminated"],
-      contract_type: ["service", "construction", "supply", "other"],
+      contract_type: ["service", "construction", "supply", "other", "bid", "private_contract"],
       misc_income_category: [
+        "recycling",
         "parking",
         "rental",
         "interest",
@@ -895,6 +1094,7 @@ export const Constants = {
         "approved",
         "rejected",
       ],
+      reconsideration_status: ["SENT", "RECEIVED", "RESOLVED", "ESCALATED"],
       report_status: ["draft", "review", "published"],
       report_type: ["monthly", "quarterly", "annual", "special"],
       severity_level: ["low", "medium", "high"],

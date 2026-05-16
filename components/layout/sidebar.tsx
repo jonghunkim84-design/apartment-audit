@@ -11,15 +11,21 @@ import {
   FileText,
   Wallet,
   ShieldCheck,
+  Wrench,
+  FileSignature,
+  Scale,
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/dashboard',        label: '대시보드',       icon: LayoutDashboard, exact: false },
-  { href: '/receipts',         label: '영수증',          icon: Receipt,         exact: true },
-  { href: '/receipts/review',  label: '검수',            icon: ScanSearch,      exact: false },
-  { href: '/audit',            label: '감사 체크리스트', icon: ClipboardCheck,  exact: false },
-  { href: '/reports',          label: '보고서',          icon: FileText,        exact: false },
-  { href: '/misc-income',      label: '잡수입',          icon: Wallet,          exact: false },
+  { href: '/dashboard',          label: '대시보드',        icon: LayoutDashboard, exact: false },
+  { href: '/receipts',           label: '영수증',           icon: Receipt,         exact: true },
+  { href: '/receipts/review',    label: '검수',             icon: ScanSearch,      exact: false },
+  { href: '/audit',              label: '감사 체크리스트',  icon: ClipboardCheck,  exact: false },
+  { href: '/long-term-repair',   label: '장기수선충당금',   icon: Wrench,          exact: false },
+  { href: '/contracts',          label: '입찰·계약',        icon: FileSignature,   exact: false },
+  { href: '/misc-income',        label: '잡수입',           icon: Wallet,          exact: false },
+  { href: '/reconsideration',    label: '재심의 요청',      icon: Scale,           exact: false },
+  { href: '/reports',            label: '보고서',           icon: FileText,        exact: false },
 ]
 
 export function Sidebar() {

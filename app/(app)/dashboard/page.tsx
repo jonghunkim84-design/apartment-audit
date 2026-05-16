@@ -6,6 +6,7 @@ import {
   Receipt, XCircle, Banknote, TriangleAlert, ShieldAlert,
 } from 'lucide-react'
 import { SpendingChart, type MonthData } from '@/components/dashboard/SpendingChart'
+import { getDepletionStatus } from '@/lib/actions/long-term-repair'
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,9 @@ export default async function DashboardPage() {
     return { label, amount }
   })
 
+  // ── 장기수선충당금 고갈 경고 ────────────────────────────────────────────────
+  const depletion = complexId ? await getDepletionStatus(complexId) : null
+
   const complexName =
     profile?.apartment_complexes &&
     typeof profile.apartment_complexes === 'object' &&
@@ -108,6 +112,28 @@ export default async function DashboardPage() {
           {complexName && <span className="ml-1 font-medium text-foreground">· {complexName}</span>}
         </p>
       </div>
+
+      {/* 장기수선충당금 고갈 경고 */}
+      {depletion?.warn && (
+        <Card className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-300">
+              장기수선충당금 잔액 부족 경고
+            </CardTitle>
+            <TriangleAlert className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold tabular-nums text-orange-700 dark:text-orange-400">
+              {depletion.estimatedMonths}개월
+              <span className="text-sm font-normal text-orange-600 ml-1">내 고갈 예상</span>
+            </p>
+            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+              현재 잔액 {fmt(depletion.latestBalance)} · 월평균 지출 {fmt(Math.round(depletion.avgMonthly))}
+              {' '}— <a href="/long-term-repair" className="underline font-medium">충당금 관리 바로가기</a>
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI 카드 4개 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
