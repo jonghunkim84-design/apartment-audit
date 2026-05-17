@@ -4,12 +4,12 @@ import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import Image from 'next/image'
 import Link from 'next/link'
 import { ShieldCheck } from 'lucide-react'
 import { login } from '@/lib/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 const schema = z.object({
@@ -36,71 +36,99 @@ export default function LoginPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center space-y-2">
-        <div className="flex justify-center">
-          <div className="p-3 rounded-full bg-primary/10">
-            <ShieldCheck className="h-8 w-8 text-primary" />
-          </div>
-        </div>
-        <CardTitle className="text-2xl">감사 시스템</CardTitle>
-        <CardDescription>입주자대표회의 감사 플랫폼</CardDescription>
-      </CardHeader>
+    <div className="min-h-screen relative flex items-center justify-center">
 
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {serverError && (
-            <Alert variant="destructive">
-              <AlertDescription>{serverError}</AlertDescription>
-            </Alert>
-          )}
+      {/* 원본 배경 이미지 — 선명하게 */}
+      <Image
+        src="/images/login-bg.jpg"
+        alt=""
+        fill
+        priority
+        className="object-cover object-center"
+      />
 
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium">이메일</label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="auditor@example.com"
-              autoComplete="email"
-              {...register('email')}
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
-          </div>
+      {/* 가벼운 전체 어둠 (폼 가독성용) */}
+      <div className="absolute inset-0 bg-black/30" />
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="text-sm font-medium">비밀번호</label>
-              <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary">
-                비밀번호 찾기
-              </Link>
+      {/* 중앙 로그인 카드 */}
+      <div className="relative z-10 w-full max-w-sm mx-4">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+
+          {/* 헤더 */}
+          <div className="px-8 pt-9 pb-6 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-3 rounded-2xl bg-white/20">
+                <ShieldCheck className="h-7 w-7 text-white" />
+              </div>
             </div>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...register('password')}
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive">{errors.password.message}</p>
-            )}
+            <h1 className="text-2xl font-bold text-white tracking-tight">감사 시스템</h1>
+            <p className="text-white/70 text-sm mt-1">입주자대표회의 감사 플랫폼</p>
           </div>
 
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? '로그인 중...' : '로그인'}
-          </Button>
-        </form>
-      </CardContent>
+          {/* 폼 */}
+          <div className="px-8 pb-6 space-y-4">
+            {serverError && (
+              <Alert variant="destructive">
+                <AlertDescription>{serverError}</AlertDescription>
+              </Alert>
+            )}
 
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          계정이 없으신가요?{' '}
-          <Link href="/signup" className="text-primary font-medium hover:underline">
-            회원가입
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-white/90">이메일</label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="auditor@example.com"
+                autoComplete="email"
+                className="bg-white/15 border-white/25 text-white placeholder:text-white/40 focus:border-white/60 focus:bg-white/20"
+                {...register('email')}
+              />
+              {errors.email && (
+                <p className="text-xs text-red-300">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-white/90">비밀번호</label>
+                <Link href="/forgot-password" className="text-xs text-white/50 hover:text-white/80 transition-colors">
+                  비밀번호 찾기
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                className="bg-white/15 border-white/25 text-white placeholder:text-white/40 focus:border-white/60 focus:bg-white/20"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-xs text-red-300">{errors.password.message}</p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-blue-500 hover:bg-blue-400 text-white font-semibold h-10 mt-1"
+              disabled={isPending}
+              onClick={handleSubmit(onSubmit)}
+            >
+              {isPending ? '로그인 중...' : '로그인'}
+            </Button>
+          </div>
+
+          {/* 푸터 */}
+          <div className="px-8 py-4 border-t border-white/10 text-center">
+            <p className="text-sm text-white/50">
+              계정이 없으신가요?{' '}
+              <Link href="/signup" className="text-blue-300 font-medium hover:text-blue-200">
+                회원가입
+              </Link>
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
   )
 }

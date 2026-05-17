@@ -39,9 +39,9 @@ export function SpendingChart({ data }: { data: MonthData[] }) {
             border: '1px solid hsl(var(--border))',
             background: 'hsl(var(--background))',
           }}
-          cursor={{ fill: 'hsl(var(--muted))' }}
+          cursor={{ fill: 'rgba(0, 0, 0, 0.04)' }}
         />
-        <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={48} />
+        <Bar dataKey="amount" fill="#2563eb" radius={[4, 4, 0, 0]} maxBarSize={48} />
       </BarChart>
     </ResponsiveContainer>
   )

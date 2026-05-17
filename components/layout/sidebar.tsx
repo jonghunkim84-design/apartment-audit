@@ -17,9 +17,10 @@ import {
   ShieldAlert,
   Globe,
   BookCheck,
+  Users,
 } from 'lucide-react'
 
-const navItems = [
+const NAV_ITEMS = [
   { href: '/dashboard',          label: '대시보드',        icon: LayoutDashboard, exact: false },
   { href: '/receipts',           label: '영수증',           icon: Receipt,         exact: true },
   { href: '/receipts/review',    label: '검수',             icon: ScanSearch,      exact: false },
@@ -34,31 +35,38 @@ const navItems = [
   { href: '/disclosure',         label: '공개 포털 관리',   icon: Globe,           exact: false },
 ]
 
-export function Sidebar() {
+const AUDITOR_ITEMS = [
+  { href: '/settings/users', label: '사용자 관리', icon: Users, exact: false },
+]
+
+export function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname()
+  const isAuditor = role === 'auditor'
+
+  const allItems = isAuditor ? [...NAV_ITEMS, ...AUDITOR_ITEMS] : NAV_ITEMS
 
   return (
-    <aside className="w-60 shrink-0 border-r bg-background flex flex-col">
-      <div className="h-14 flex items-center gap-2.5 px-5 border-b">
-        <ShieldCheck className="h-5 w-5 text-primary" />
-        <span className="font-semibold text-sm leading-tight">
+    <aside className="w-60 shrink-0 flex flex-col bg-blue-500">
+      <div className="h-14 flex items-center gap-2.5 px-5 border-b border-blue-400">
+        <ShieldCheck className="h-5 w-5 text-white" />
+        <span className="font-semibold text-sm leading-tight text-white">
           입주자대표회의<br />
-          <span className="text-muted-foreground font-normal">감사시스템</span>
+          <span className="text-blue-100 font-normal">감사시스템</span>
         </span>
       </div>
 
-      <nav className="flex-1 p-3 space-y-0.5">
-        {navItems.map(({ href, label, icon: Icon, exact }) => {
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+        {allItems.map(({ href, label, icon: Icon, exact }) => {
           const isActive = exact ? pathname === href : (pathname === href || pathname.startsWith(href + '/'))
           return (
             <Link
               key={href}
               href={href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  ? 'bg-white/20 text-white'
+                  : 'text-blue-100 hover:bg-white/10 hover:text-white'
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />

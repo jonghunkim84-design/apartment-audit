@@ -43,8 +43,14 @@ export default function SignupPage() {
     })
   }
 
+  const wrapper = (content: React.ReactNode) => (
+    <div className="min-h-screen flex items-center justify-center bg-slate-100">
+      <div className="w-full max-w-md px-4">{content}</div>
+    </div>
+  )
+
   if (successMessage) {
-    return (
+    return wrapper(
       <Card>
         <CardHeader className="text-center space-y-2">
           <div className="flex justify-center">
@@ -68,7 +74,7 @@ export default function SignupPage() {
     )
   }
 
-  return (
+  return wrapper(
     <Card>
       <CardHeader className="text-center space-y-2">
         <div className="flex justify-center">
@@ -145,3 +151,4 @@ export default function SignupPage() {
     </Card>
   )
 }
+

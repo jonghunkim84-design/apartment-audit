@@ -35,6 +35,8 @@ export default function SetupPage() {
   }
 
   return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-100">
+    <div className="w-full max-w-md px-4">
     <Card>
       <CardHeader className="text-center space-y-2">
         <div className="flex justify-center">
@@ -81,5 +83,7 @@ export default function SetupPage() {
         </form>
       </CardContent>
     </Card>
+    </div>
+    </div>
   )
 }

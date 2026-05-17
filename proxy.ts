@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback']
+const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/portal', '/view']
 
 function clean(s: string | undefined): string {
   return (s ?? '').replace(/^﻿/, '').trim()
