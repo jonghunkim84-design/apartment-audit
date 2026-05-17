@@ -46,8 +46,8 @@ export function Sidebar({ role }: { role?: string }) {
   const allItems = isAuditor ? [...NAV_ITEMS, ...AUDITOR_ITEMS] : NAV_ITEMS
 
   return (
-    <aside className="w-60 shrink-0 flex flex-col bg-blue-500">
-      <div className="h-14 flex items-center gap-2.5 px-5 border-b border-blue-400">
+    <aside className="w-60 shrink-0 flex flex-col" style={{ backgroundColor: '#8BADD9' }}>
+      <div className="h-14 flex items-center gap-2.5 px-5 border-b" style={{ borderColor: '#7A9FD0' }}>
         <ShieldCheck className="h-5 w-5 text-white" />
         <span className="font-semibold text-sm leading-tight text-white">
           입주자대표회의<br />

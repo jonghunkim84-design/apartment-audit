@@ -85,6 +85,21 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 - 상태 추적 (SENT → RECEIVED → RESOLVED → ESCALATED)
 - 처리 결과 기록
 
+### ✅ UI 리디자인 (2026-05-17)
+- 전체 배경: `bg-slate-100` (쿨 블루-그레이, SOYO HANNAM 톤)
+- 사이드바: `#8BADD9` 퍼리윙클 블루, 활성 메뉴 `bg-white/20`, role prop으로 auditor 전용 메뉴 분기
+- 대시보드 KPI 카드: `rounded-2xl shadow-sm`, 컬러 아이콘 배경, 이상건수 빨간 배지
+- 로그인 화면: 원본 이미지 전체 배경 + `backdrop-blur-xl` 중앙 글라스 카드
+- Auth 레이아웃 분리: 각 auth 페이지 자체 `min-h-screen` 래퍼 적용 (layout은 passthrough)
+
+### ✅ 사용자 관리 (`/settings/users`)
+- auditor 역할만 접근 가능 (비권한자 `/dashboard` 리다이렉트)
+- 단지 소속 구성원 목록 테이블 (이메일·이름·역할·가입일·마지막 로그인)
+- 역할 인라인 드롭다운 즉시 변경 → `user_metadata.role` 업데이트
+  - 역할: `auditor(감사인)` / `accountant(회계담당자)` / `manager(관리소장)` / `external(외부인)`
+- 유저 초대: 이메일 + 역할 선택 → `inviteUserByEmail` 발송
+- 사이드바 "사용자 관리" 메뉴: auditor 역할만 표시 (layout에서 role prop 전달)
+
 ### ✅ Phase 2 — 알림 시스템
 - 이상 감지 시 알림 자동 생성 (INFO/WARNING/CRITICAL)
 - 헤더 알림 벨 + 읽음 처리 (`GET/PATCH /api/notifications`)
@@ -119,6 +134,9 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `POST` | `/api/kapt` | K-apt 공공API 호출 → 유사단지 비교 → kapt_comparison upsert + [평균초과] findings 등록 |
 | `GET` | `/api/external-audits` | 해당 단지의 연도별 외부감사 목록 조회 (`?year=YYYY` 필터) |
 | `POST` | `/api/external-audits` | external_audits 저장 + findings 일괄 INSERT |
+| `GET` | `/api/admin/users` | 단지 소속 유저 목록 (auditor 전용, Admin SDK) |
+| `PATCH` | `/api/admin/users` | user_metadata.role 업데이트 |
+| `POST` | `/api/admin/users` | 유저 초대 (inviteUserByEmail + 역할 설정) |
 
 ### Server Actions (`'use server'`)
 | 파일 | 주요 함수 |
@@ -135,6 +153,7 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `lib/actions/kapt.ts` | `getKaptComparison` |
 | `lib/actions/external-audits.ts` | `getExternalAudits`, `getExternalAudit`, `createExternalAudit`, `createExternalAuditFindings` |
 | `lib/notifications/create.ts` | `createNotificationsForComplex` |
+| `lib/actions/kapt.ts` | `getKaptComparison` |
 
 ---
 
@@ -155,11 +174,13 @@ app/
     external-audits/new/ → 외부감사 등록
     external-audits/[id]/findings/ → 지적사항 일괄 입력
     reports/        → 감사 보고서 PDF
+    settings/users/ → 사용자 권한 관리 (auditor 전용)
   api/
     ocr/            → Gemini OCR 파이프라인
     receipts/validate/ → 정책 4필터 검사
     notifications/  → 알림 CRUD
     reports/generate/  → PDF 생성 스트림
+    admin/users/    → 유저 목록·역할변경·초대 (Admin SDK, auditor 전용)
 
 components/
   ui/               → shadcn (건드리지 말 것)
@@ -172,7 +193,8 @@ components/
   reconsideration/  → ReconsiderationClient
   reports/          → AuditReportDocument (PDF), ReportPageClient
   external-audits/  → NewAuditClient, FindingsBatchClient, ExternalAuditsClient
-  layout/           → Sidebar, NotificationBell
+  settings/         → UsersManagementClient
+  layout/           → Sidebar (role prop으로 auditor 메뉴 분기), NotificationBell
 
 lib/
   supabase/         → client.ts, server.ts, admin.ts
@@ -184,6 +206,7 @@ lib/
 
 public/
   fonts/            → NotoSansKR woff (PDF 한글 렌더링용, git 포함)
+  images/           → login-bg.jpg (원본), login-bg-building.jpg (건물 크롭)
 
 types/
   database.ts       → Supabase 자동생성 타입 (supabase gen types)
@@ -223,6 +246,8 @@ types/
 - [x] P4 외부감사 리스크 가중치 (`/api/pattern-analysis` — 최근 2개년 외부감사 ACFE 빈도 집계 → Top 3 고위험 카테고리 시 ±2σ→±1.5σ, 거래처 집중도 30%→20% 자동 강화)
 - [x] K-apt 유사단지 관리비 비교 (`GET/POST /api/kapt` — 공공API, kapt_comparison 테이블, 대시보드 RadarChart, [평균초과] 배지)
 - [x] 외부 회계감사 (`/external-audits` — 보고서 등록, PDF+해시, 지적사항 연계)
+- [x] 사용자 관리 (`/settings/users` — auditor 전용, 역할 인라인 변경, 초대 발송)
+- [x] UI 리디자인 (slate/blue 프리미엄 톤, 글라스 로그인, KPI 카드 섀도)
 - [ ] 공개 포털 (입주민 열람용)
 - [ ] 계약 비교 분석 (낙찰률·단가 이상 탐지)
 - [ ] 모바일 최적화
