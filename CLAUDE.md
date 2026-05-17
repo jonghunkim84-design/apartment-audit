@@ -114,7 +114,7 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `GET` | `/api/notifications` | 로그인 사용자 알림 목록 조회 |
 | `PATCH` | `/api/notifications` | 알림 읽음 처리 (단건 또는 전체) |
 | `GET` | `/api/reports/generate` | 감사 보고서 PDF 생성 (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) |
-| `POST` | `/api/pattern-analysis` | P4 누적 패턴 분석 (Benford's Law + ACFE 6종 탐지 → audit_findings 자동 등록) |
+| `POST` | `/api/pattern-analysis` | P4 누적 패턴 분석 (Benford's Law + ACFE 6종 탐지 + 외부감사 리스크 가중치 → audit_findings 자동 등록) |
 | `GET` | `/api/kapt` | 최신 K-apt 유사단지 비교 데이터 조회 |
 | `POST` | `/api/kapt` | K-apt 공공API 호출 → 유사단지 비교 → kapt_comparison upsert + [평균초과] findings 등록 |
 | `GET` | `/api/external-audits` | 해당 단지의 연도별 외부감사 목록 조회 (`?year=YYYY` 필터) |
@@ -200,6 +200,14 @@ types/
 6. 금액은 항상 원 단위 정수(BIGINT), 표시만 포맷팅
 7. PDF 관련 코드는 서버 전용 (`app/api/reports/generate/` 또는 `components/reports/`)
 
+### ✅ Phase 3 — P4 외부감사 리스크 가중치 (`POST /api/pattern-analysis`)
+- 분석 실행 전 최근 2개년 `external_audits` + `audit_findings(source='external')` 조회
+- ACFE 카테고리 빈도 집계 → Top 3 고위험 카테고리 추출
+- 시계열 이상탐지: 고위험 시 ±2σ → ±1.5σ (`재무제표부정·자산횡령·가공거래` 해당)
+- 거래처 집중도: 고위험 시 30% → 20% (`자산횡령·부패` 해당)
+- finding description에 `[외부감사가중치적용]` 태그 자동 부착
+- 응답에 `externalAuditRiskWeighting` 섹션 포함 (카테고리·조정값·사유)
+
 ### ✅ Phase 3 — 외부 회계감사 (`/external-audits`)
 - 외부감사 보고서 등록 (회계법인·담당 CPA·감사일·감사 의견)
 - PDF 업로드 → Supabase Storage (`external-audits` 버킷, 비공개) → SHA-256 해시 자동 계산
@@ -212,6 +220,7 @@ types/
 
 ## 미완성 (Phase 3 예정)
 - [x] P4 Benford's Law + ACFE 패턴 분석 (`POST /api/pattern-analysis` — 6종 탐지, audit_findings 자동 등록)
+- [x] P4 외부감사 리스크 가중치 (`/api/pattern-analysis` — 최근 2개년 외부감사 ACFE 빈도 집계 → Top 3 고위험 카테고리 시 ±2σ→±1.5σ, 거래처 집중도 30%→20% 자동 강화)
 - [x] K-apt 유사단지 관리비 비교 (`GET/POST /api/kapt` — 공공API, kapt_comparison 테이블, 대시보드 RadarChart, [평균초과] 배지)
 - [x] 외부 회계감사 (`/external-audits` — 보고서 등록, PDF+해시, 지적사항 연계)
 - [ ] 공개 포털 (입주민 열람용)
