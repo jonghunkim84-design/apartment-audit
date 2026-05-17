@@ -114,6 +114,11 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `GET` | `/api/notifications` | 로그인 사용자 알림 목록 조회 |
 | `PATCH` | `/api/notifications` | 알림 읽음 처리 (단건 또는 전체) |
 | `GET` | `/api/reports/generate` | 감사 보고서 PDF 생성 (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) |
+| `POST` | `/api/pattern-analysis` | P4 누적 패턴 분석 (Benford's Law + ACFE 6종 탐지 → audit_findings 자동 등록) |
+| `GET` | `/api/kapt` | 최신 K-apt 유사단지 비교 데이터 조회 |
+| `POST` | `/api/kapt` | K-apt 공공API 호출 → 유사단지 비교 → kapt_comparison upsert + [평균초과] findings 등록 |
+| `GET` | `/api/external-audits` | 해당 단지의 연도별 외부감사 목록 조회 (`?year=YYYY` 필터) |
+| `POST` | `/api/external-audits` | external_audits 저장 + findings 일괄 INSERT |
 
 ### Server Actions (`'use server'`)
 | 파일 | 주요 함수 |
@@ -127,6 +132,8 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `lib/actions/misc-income.ts` | `getMiscIncomeData`, `createMiscIncome`, `deleteMiscIncome`, `updatePaymentStatus`, `uploadMiscIncomeFile` |
 | `lib/actions/reconsideration.ts` | `getReconsiderations`, `createReconsideration`, `updateResolution`, `uploadReconDocument` |
 | `lib/actions/report-data.ts` | `fetchReportData` (PDF용 데이터 취합, Server Action 아님) |
+| `lib/actions/kapt.ts` | `getKaptComparison` |
+| `lib/actions/external-audits.ts` | `getExternalAudits`, `getExternalAudit`, `createExternalAudit`, `createExternalAuditFindings` |
 | `lib/notifications/create.ts` | `createNotificationsForComplex` |
 
 ---
@@ -144,6 +151,9 @@ app/
     contracts/      → 입찰·계약 관리
     misc-income/    → 잡수입 관리
     reconsideration/→ 재심의 요청
+    external-audits/→ 외부 회계감사 목록
+    external-audits/new/ → 외부감사 등록
+    external-audits/[id]/findings/ → 지적사항 일괄 입력
     reports/        → 감사 보고서 PDF
   api/
     ocr/            → Gemini OCR 파이프라인
@@ -161,6 +171,7 @@ components/
   misc-income/      → MiscIncomeClient, MiscIncomeChart
   reconsideration/  → ReconsiderationClient
   reports/          → AuditReportDocument (PDF), ReportPageClient
+  external-audits/  → NewAuditClient, FindingsBatchClient, ExternalAuditsClient
   layout/           → Sidebar, NotificationBell
 
 lib/
@@ -189,8 +200,20 @@ types/
 6. 금액은 항상 원 단위 정수(BIGINT), 표시만 포맷팅
 7. PDF 관련 코드는 서버 전용 (`app/api/reports/generate/` 또는 `components/reports/`)
 
+### ✅ Phase 3 — 외부 회계감사 (`/external-audits`)
+- 외부감사 보고서 등록 (회계법인·담당 CPA·감사일·감사 의견)
+- PDF 업로드 → Supabase Storage (`external-audits` 버킷, 비공개) → SHA-256 해시 자동 계산
+- 지적사항 일괄 입력 폼 (동적 행 추가, ACFE 분류 연계)
+- `audit_findings` 테이블에 `source='external'`, `external_audit_id` 연결 저장
+- KPI: 최근 감사 의견 / 누적 감사 건수 / 적정 의견 비율
+- REST API: `GET /api/external-audits` (연도 필터), `POST /api/external-audits` (감사+지적사항 일괄)
+
+---
+
 ## 미완성 (Phase 3 예정)
-- [ ] P4 Benford's Law + ACFE 패턴 분석 (100건 이상 누적 후)
+- [x] P4 Benford's Law + ACFE 패턴 분석 (`POST /api/pattern-analysis` — 6종 탐지, audit_findings 자동 등록)
+- [x] K-apt 유사단지 관리비 비교 (`GET/POST /api/kapt` — 공공API, kapt_comparison 테이블, 대시보드 RadarChart, [평균초과] 배지)
+- [x] 외부 회계감사 (`/external-audits` — 보고서 등록, PDF+해시, 지적사항 연계)
 - [ ] 공개 포털 (입주민 열람용)
 - [ ] 계약 비교 분석 (낙찰률·단가 이상 탐지)
 - [ ] 모바일 최적화

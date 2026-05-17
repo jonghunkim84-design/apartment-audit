@@ -14,6 +14,9 @@ import {
   Wrench,
   FileSignature,
   Scale,
+  ShieldAlert,
+  Globe,
+  BookCheck,
 } from 'lucide-react'
 
 const navItems = [
@@ -25,7 +28,10 @@ const navItems = [
   { href: '/contracts',          label: '입찰·계약',        icon: FileSignature,   exact: false },
   { href: '/misc-income',        label: '잡수입',           icon: Wallet,          exact: false },
   { href: '/reconsideration',    label: '재심의 요청',      icon: Scale,           exact: false },
+  { href: '/findings',           label: '감사 지적사항',    icon: ShieldAlert,     exact: false },
+  { href: '/external-audits',    label: '외부 회계감사',    icon: BookCheck,       exact: false },
   { href: '/reports',            label: '보고서',           icon: FileText,        exact: false },
+  { href: '/disclosure',         label: '공개 포털 관리',   icon: Globe,           exact: false },
 ]
 
 export function Sidebar() {

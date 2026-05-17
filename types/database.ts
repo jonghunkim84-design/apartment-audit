@@ -69,21 +69,30 @@ export type Database = {
           address: string | null
           created_at: string
           id: string
+          kapt_code: string | null
           name: string
+          public_code: string | null
+          region_code: string | null
           unit_count: number | null
         }
         Insert: {
           address?: string | null
           created_at?: string
           id?: string
+          kapt_code?: string | null
           name: string
+          public_code?: string | null
+          region_code?: string | null
           unit_count?: number | null
         }
         Update: {
           address?: string | null
           created_at?: string
           id?: string
+          kapt_code?: string | null
           name?: string
+          public_code?: string | null
+          region_code?: string | null
           unit_count?: number | null
         }
         Relationships: []
@@ -199,11 +208,16 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string | null
+          external_audit_id: string | null
           id: string
           receipt_id: string | null
+          remediation_due: string | null
+          remediation_note: string | null
+          remediation_status: string | null
           resolved_at: string | null
           resolved_by: string | null
           severity: string
+          source: string | null
           status: string
           title: string
           updated_at: string | null
@@ -213,11 +227,16 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          external_audit_id?: string | null
           id?: string
           receipt_id?: string | null
+          remediation_due?: string | null
+          remediation_note?: string | null
+          remediation_status?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: string
+          source?: string | null
           status?: string
           title: string
           updated_at?: string | null
@@ -227,11 +246,16 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          external_audit_id?: string | null
           id?: string
           receipt_id?: string | null
+          remediation_due?: string | null
+          remediation_note?: string | null
+          remediation_status?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: string
+          source?: string | null
           status?: string
           title?: string
           updated_at?: string | null
@@ -387,51 +411,148 @@ export type Database = {
           },
         ]
       }
-      long_term_repair: {
+      external_audits: {
         Row: {
-          id: string
-          apartment_complex_id: string
-          year: number
-          month: number | null
-          planned_amount: number
-          actual_amount: number
-          balance: number
-          description: string | null
-          file_url: string | null
-          is_unplanned: boolean
-          created_by: string | null
+          audit_date: string
+          audit_firm: string
+          audit_year: number
+          auditor_name: string | null
+          complex_id: string | null
           created_at: string
-          updated_at: string
+          created_by: string | null
+          id: string
+          opinion: string | null
+          report_hash: string | null
+          report_url: string | null
+          summary: string | null
         }
         Insert: {
-          id?: string
-          apartment_complex_id: string
-          year: number
-          month?: number | null
-          planned_amount?: number
-          actual_amount?: number
-          balance?: number
-          description?: string | null
-          file_url?: string | null
-          is_unplanned?: boolean
-          created_by?: string | null
+          audit_date: string
+          audit_firm: string
+          audit_year: number
+          auditor_name?: string | null
+          complex_id?: string | null
           created_at?: string
-          updated_at?: string
+          created_by?: string | null
+          id?: string
+          opinion?: string | null
+          report_hash?: string | null
+          report_url?: string | null
+          summary?: string | null
         }
         Update: {
+          audit_date?: string
+          audit_firm?: string
+          audit_year?: number
+          auditor_name?: string | null
+          complex_id?: string | null
+          created_at?: string
+          created_by?: string | null
           id?: string
+          opinion?: string | null
+          report_hash?: string | null
+          report_url?: string | null
+          summary?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_audits_complex_id_fkey"
+            columns: ["complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kapt_comparison: {
+        Row: {
+          apartment_complex_id: string
+          avg_amount: number
+          category: string
+          created_at: string | null
+          id: string
+          our_amount: number
+          sample_count: number
+          updated_at: string | null
+          year_month: string
+        }
+        Insert: {
+          apartment_complex_id: string
+          avg_amount?: number
+          category: string
+          created_at?: string | null
+          id?: string
+          our_amount?: number
+          sample_count?: number
+          updated_at?: string | null
+          year_month: string
+        }
+        Update: {
           apartment_complex_id?: string
-          year?: number
-          month?: number | null
-          planned_amount?: number
+          avg_amount?: number
+          category?: string
+          created_at?: string | null
+          id?: string
+          our_amount?: number
+          sample_count?: number
+          updated_at?: string | null
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kapt_comparison_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      long_term_repair: {
+        Row: {
+          actual_amount: number
+          apartment_complex_id: string
+          balance: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_url: string | null
+          id: string
+          is_unplanned: boolean
+          month: number | null
+          planned_amount: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
           actual_amount?: number
+          apartment_complex_id: string
           balance?: number
+          created_at?: string
+          created_by?: string | null
           description?: string | null
           file_url?: string | null
+          id?: string
           is_unplanned?: boolean
-          created_by?: string | null
-          created_at?: string
+          month?: number | null
+          planned_amount?: number
           updated_at?: string
+          year: number
+        }
+        Update: {
+          actual_amount?: number
+          apartment_complex_id?: string
+          balance?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          is_unplanned?: boolean
+          month?: number | null
+          planned_amount?: number
+          updated_at?: string
+          year?: number
         }
         Relationships: [
           {
@@ -611,6 +732,69 @@ export type Database = {
             columns: ["apartment_complex_id"]
             isOneToOne: false
             referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_disclosures: {
+        Row: {
+          apartment_complex_id: string
+          approved_at: string
+          approved_by: string | null
+          created_at: string
+          data: Json
+          disclosure_type: string
+          id: string
+          is_active: boolean
+          kapt_match: boolean | null
+          period: string
+          report_pdf_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          apartment_complex_id: string
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          data?: Json
+          disclosure_type: string
+          id?: string
+          is_active?: boolean
+          kapt_match?: boolean | null
+          period: string
+          report_pdf_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          apartment_complex_id?: string
+          approved_at?: string
+          approved_by?: string | null
+          created_at?: string
+          data?: Json
+          disclosure_type?: string
+          id?: string
+          is_active?: boolean
+          kapt_match?: boolean | null
+          period?: string
+          report_pdf_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_disclosures_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "public_disclosures_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -823,6 +1007,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reconsideration_requests_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reports: {
@@ -911,14 +1102,20 @@ export type Database = {
       checklist_item_status: "pending" | "pass" | "fail" | "na"
       checklist_status: "draft" | "in_progress" | "completed"
       contract_status: "active" | "expired" | "terminated"
-      contract_type: "service" | "construction" | "supply" | "other" | "bid" | "private_contract"
+      contract_type:
+        | "service"
+        | "construction"
+        | "supply"
+        | "other"
+        | "bid"
+        | "private_contract"
       misc_income_category:
-        | "recycling"
         | "parking"
         | "rental"
         | "interest"
         | "penalty"
         | "other"
+        | "recycling"
       notification_severity: "INFO" | "WARNING" | "CRITICAL"
       policy_check_type:
         | "split_payment"
@@ -944,7 +1141,6 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
@@ -1063,37 +1259,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      anomaly_detection_type: [
-        "benfords_law",
-        "acfe_pattern",
-        "statistical_outlier",
-      ],
+      anomaly_detection_type: ["benfords_law", "acfe_pattern", "statistical_outlier"],
       anomaly_status: ["open", "investigating", "resolved", "false_positive"],
       checklist_item_status: ["pending", "pass", "fail", "na"],
       checklist_status: ["draft", "in_progress", "completed"],
       contract_status: ["active", "expired", "terminated"],
       contract_type: ["service", "construction", "supply", "other", "bid", "private_contract"],
-      misc_income_category: [
-        "recycling",
-        "parking",
-        "rental",
-        "interest",
-        "penalty",
-        "other",
-      ],
-      policy_check_type: [
-        "split_payment",
-        "time_restriction",
-        "prohibited_category",
-        "limit_exceeded",
-      ],
-      receipt_status: [
-        "pending",
-        "processing",
-        "manual_review",
-        "approved",
-        "rejected",
-      ],
+      misc_income_category: ["parking", "rental", "interest", "penalty", "other", "recycling"],
+      notification_severity: ["INFO", "WARNING", "CRITICAL"],
+      policy_check_type: ["split_payment", "time_restriction", "prohibited_category", "limit_exceeded"],
+      receipt_status: ["pending", "processing", "manual_review", "approved", "rejected"],
       reconsideration_status: ["SENT", "RECEIVED", "RESOLVED", "ESCALATED"],
       report_status: ["draft", "review", "published"],
       report_type: ["monthly", "quarterly", "annual", "special"],
