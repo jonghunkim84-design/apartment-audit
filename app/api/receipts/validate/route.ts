@@ -20,6 +20,7 @@ const KR_HOLIDAYS = new Set([
 const LIMITS: Record<string, number> = {
   식대: 20_000,        // 제45조: 1인당 20,000원
   식비: 20_000,        // 제45조: 1인당 20,000원
+  회의비: 20_000,      // 제45조: 식대 동일 적용
   접대비: 50_000,
   출장비: 100_000,
   출석수당: 50_000,    // 제45조: 1회 한도
@@ -189,8 +190,8 @@ export async function POST(request: NextRequest) {
     const amount = receipt.amount ?? 0
     const limitViolations: PolicyFlag[] = []
 
-    // 4-1: 식대/식비 — 1인당 20,000원 초과 (제45조)
-    if ((category === '식비' || category === '식대') && amount > LIMITS['식대']) {
+    // 4-1: 식대/식비/회의비 — 1인당 20,000원 초과 (제45조)
+    if ((category === '식비' || category === '식대' || category === '회의비') && amount > LIMITS['식대']) {
       limitViolations.push({
         type: '한도초과', 항목: '식대',
         한도: LIMITS['식대'], 실제금액: amount,
