@@ -123,12 +123,13 @@ export async function checkSubmissionDeadline(): Promise<void> {
   const today = todayKST()
 
   // resolved_at이 있고 remediation_due가 미설정인 건에 due 자동 부여
+  // status: 'open' | 'investigating' (아직 종결되지 않은 활성 건)
   const { data: noDue } = await supabase
     .from('audit_findings')
     .select('id, resolved_at')
     .not('resolved_at', 'is', null)
     .is('remediation_due', null)
-    .eq('status', 'draft')
+    .in('status', ['open', 'investigating'])
 
   for (const finding of noDue ?? []) {
     const due = new Date(new Date(finding.resolved_at!).getTime() + 7 * 86_400_000)
@@ -140,11 +141,11 @@ export async function checkSubmissionDeadline(): Promise<void> {
       .eq('id', finding.id)
   }
 
-  // 제출 기한이 오늘보다 이전이고 draft 상태인 건 조회
+  // 제출 기한이 오늘보다 이전이고 아직 종결되지 않은 건 조회
   const { data: overdue } = await supabase
     .from('audit_findings')
     .select('id, apartment_complex_id, title')
-    .eq('status', 'draft')
+    .in('status', ['open', 'investigating'])
     .not('remediation_due', 'is', null)
     .lt('remediation_due', today)
 
