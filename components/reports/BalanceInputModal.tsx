@@ -148,7 +148,7 @@ export function BalanceInputModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>예금잔액 대조 확인 입력 — 별지 제3-2호서식</DialogTitle>
         </DialogHeader>
@@ -183,20 +183,20 @@ export function BalanceInputModal({ open, onClose }: Props) {
         </div>
 
         {/* 계좌 입력 테이블 */}
-        <div className="overflow-x-auto rounded border">
-          <table className="w-full text-xs border-collapse">
+        <div className="rounded border">
+          <table className="w-full text-sm border-collapse">
             <thead className="bg-muted/50">
               <tr>
-                <th className="border px-2 py-1.5 w-7 text-center">#</th>
-                <th className="border px-2 py-1.5 w-24">금융기관</th>
-                <th className="border px-2 py-1.5 w-24">용도</th>
-                <th className="border px-2 py-1.5 w-20">종류</th>
-                <th className="border px-2 py-1.5 w-32">계좌번호</th>
-                <th className="border px-2 py-1.5 w-28 text-right">장부금액 (원)</th>
-                <th className="border px-2 py-1.5 w-28 text-right">확인금액 (원)</th>
-                <th className="border px-2 py-1.5 w-28 text-right">차이금액 (원)</th>
-                <th className="border px-2 py-1.5 w-24">비고</th>
-                <th className="border px-2 py-1.5 w-8"></th>
+                <th className="border px-2 py-2 w-9 text-center">#</th>
+                <th className="border px-3 py-2 w-36">금융기관</th>
+                <th className="border px-3 py-2 w-36">용도</th>
+                <th className="border px-3 py-2 w-28">종류</th>
+                <th className="border px-3 py-2 w-44">계좌번호</th>
+                <th className="border px-3 py-2 text-right">장부금액 (원)</th>
+                <th className="border px-3 py-2 text-right">확인금액 (원)</th>
+                <th className="border px-3 py-2 text-right">차이금액 (원)</th>
+                <th className="border px-3 py-2">비고</th>
+                <th className="border px-2 py-2 w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -207,72 +207,72 @@ export function BalanceInputModal({ open, onClose }: Props) {
                     : null
                 return (
                   <tr key={i} className="hover:bg-muted/20">
-                    <td className="border px-1 py-1 text-center text-muted-foreground">{i + 1}</td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5 text-center text-muted-foreground text-sm">{i + 1}</td>
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.bank}
                         onChange={(e) => updateRow(i, 'bank', e.target.value)}
                         placeholder="국민은행"
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0"
                       />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.purpose}
                         onChange={(e) => updateRow(i, 'purpose', e.target.value)}
                         placeholder="관리비"
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0"
                       />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.type}
                         onChange={(e) => updateRow(i, 'type', e.target.value)}
                         placeholder="보통예금"
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0"
                       />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.accountNo}
                         onChange={(e) => updateRow(i, 'accountNo', e.target.value)}
                         placeholder="123-456-789"
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0"
                       />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.bookAmount !== null ? row.bookAmount.toLocaleString('ko-KR') : ''}
                         onChange={(e) => updateRow(i, 'bookAmount', e.target.value)}
                         placeholder="0"
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0 text-right"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0 text-right"
                       />
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.confirmedAmount !== null ? row.confirmedAmount.toLocaleString('ko-KR') : ''}
                         onChange={(e) => updateRow(i, 'confirmedAmount', e.target.value)}
                         placeholder="0"
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0 text-right"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0 text-right"
                       />
                     </td>
-                    <td className={`border px-2 py-1 text-right font-medium ${diff !== null && diff !== 0 ? 'text-destructive' : ''}`}>
+                    <td className={`border px-3 py-1.5 text-right text-sm font-medium ${diff !== null && diff !== 0 ? 'text-destructive' : ''}`}>
                       {diff !== null ? fmtNum(diff) : ''}
                     </td>
-                    <td className="border px-1 py-1">
+                    <td className="border px-2 py-1.5">
                       <Input
                         value={row.note}
                         onChange={(e) => updateRow(i, 'note', e.target.value)}
-                        className="h-7 text-xs border-0 p-0 focus-visible:ring-0"
+                        className="h-8 text-sm border-0 p-0 focus-visible:ring-0"
                       />
                     </td>
-                    <td className="border px-1 py-1 text-center">
+                    <td className="border px-2 py-1.5 text-center">
                       <button
                         onClick={() => deleteRow(i)}
                         className="text-muted-foreground hover:text-destructive transition-colors"
                         disabled={rows.length === 1}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
@@ -280,14 +280,14 @@ export function BalanceInputModal({ open, onClose }: Props) {
               })}
 
               {/* 합계 행 */}
-              <tr className="bg-muted/40 font-semibold">
-                <td className="border px-2 py-1.5 text-center" colSpan={5}>합계</td>
-                <td className="border px-2 py-1.5 text-right">{fmtNum(totalBook)}</td>
-                <td className="border px-2 py-1.5 text-right">{fmtNum(totalConfirmed)}</td>
-                <td className={`border px-2 py-1.5 text-right ${totalDiff !== 0 ? 'text-destructive' : ''}`}>
+              <tr className="bg-muted/40 font-semibold text-sm">
+                <td className="border px-3 py-2 text-center" colSpan={5}>합계</td>
+                <td className="border px-3 py-2 text-right">{fmtNum(totalBook)}</td>
+                <td className="border px-3 py-2 text-right">{fmtNum(totalConfirmed)}</td>
+                <td className={`border px-3 py-2 text-right ${totalDiff !== 0 ? 'text-destructive' : ''}`}>
                   {fmtNum(totalDiff)}
                 </td>
-                <td className="border px-2 py-1.5" colSpan={2}></td>
+                <td className="border px-3 py-2" colSpan={2}></td>
               </tr>
             </tbody>
           </table>
