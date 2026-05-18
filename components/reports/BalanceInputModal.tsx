@@ -183,20 +183,20 @@ export function BalanceInputModal({ open, onClose }: Props) {
         </div>
 
         {/* 계좌 입력 테이블 */}
-        <div className="rounded border">
-          <table className="w-full text-sm border-collapse">
+        <div className="overflow-x-auto rounded border">
+          <table className="text-sm border-collapse" style={{ minWidth: '1100px', width: '100%' }}>
             <thead className="bg-muted/50">
               <tr>
-                <th className="border px-2 py-2 w-9 text-center">#</th>
-                <th className="border px-3 py-2 w-36">금융기관</th>
-                <th className="border px-3 py-2 w-36">용도</th>
-                <th className="border px-3 py-2 w-28">종류</th>
-                <th className="border px-3 py-2 w-44">계좌번호</th>
-                <th className="border px-3 py-2 text-right">장부금액 (원)</th>
-                <th className="border px-3 py-2 text-right">확인금액 (원)</th>
-                <th className="border px-3 py-2 text-right">차이금액 (원)</th>
-                <th className="border px-3 py-2">비고</th>
-                <th className="border px-2 py-2 w-10"></th>
+                <th className="border px-2 py-2 whitespace-nowrap text-center" style={{ width: '40px' }}>#</th>
+                <th className="border px-3 py-2 whitespace-nowrap" style={{ width: '140px' }}>금융기관</th>
+                <th className="border px-3 py-2 whitespace-nowrap" style={{ width: '130px' }}>용도</th>
+                <th className="border px-3 py-2 whitespace-nowrap" style={{ width: '110px' }}>종류</th>
+                <th className="border px-3 py-2 whitespace-nowrap" style={{ width: '170px' }}>계좌번호</th>
+                <th className="border px-3 py-2 whitespace-nowrap text-right" style={{ width: '145px' }}>장부금액 (원)</th>
+                <th className="border px-3 py-2 whitespace-nowrap text-right" style={{ width: '145px' }}>확인금액 (원)</th>
+                <th className="border px-3 py-2 whitespace-nowrap text-right" style={{ width: '145px' }}>차이금액 (원)</th>
+                <th className="border px-3 py-2 whitespace-nowrap">비고</th>
+                <th className="border px-2 py-2" style={{ width: '44px' }}></th>
               </tr>
             </thead>
             <tbody>
