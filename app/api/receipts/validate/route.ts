@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
           .select('id')
           .eq('apartment_complex_id', profile.apartment_complex_id)
           .eq('business_number', receipt.business_number)
-          .eq('contract_type', '입찰')
+          .eq('contract_type', 'bid')
           .limit(1)
 
         const hasBid = (bidContracts ?? []).length > 0
