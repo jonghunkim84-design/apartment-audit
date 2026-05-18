@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database'
 
 export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
 
@@ -10,10 +12,15 @@ export interface CreateNotificationPayload {
   severity: NotificationSeverity
   category?: string
   referenceId?: string
+  /** 지정 시 해당 역할만 수신. 미지정 시 기존 로직(auditor 전체 + CRITICAL→admin) */
+  targetRoles?: string[]
 }
 
-export async function createNotificationsForComplex(payload: CreateNotificationPayload): Promise<void> {
-  const supabase = await createClient()
+export async function createNotificationsForComplex(
+  payload: CreateNotificationPayload,
+  supabaseClient?: SupabaseClient<Database>,
+): Promise<void> {
+  const supabase = supabaseClient ?? await createClient()
 
   const { data: profiles } = await supabase
     .from('profiles')
@@ -23,6 +30,9 @@ export async function createNotificationsForComplex(payload: CreateNotificationP
   if (!profiles?.length) return
 
   const eligible = profiles.filter((p) => {
+    if (payload.targetRoles?.length) {
+      return payload.targetRoles.includes(p.role ?? '')
+    }
     if (p.role === 'auditor') return true
     if (p.role === 'admin') return payload.severity === 'CRITICAL'
     // viewer: only if they triggered the action

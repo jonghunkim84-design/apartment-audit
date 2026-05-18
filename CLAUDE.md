@@ -130,6 +130,18 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 ### ✅ Phase 2 — 알림 시스템
 - 이상 감지 시 알림 자동 생성 (INFO/WARNING/CRITICAL)
 - 헤더 알림 벨 + 읽음 처리 (`GET/PATCH /api/notifications`)
+- `targetRoles?: string[]` 파라미터로 역할별 수신 제어 (미지정 시 auditor 전체 + CRITICAL→admin)
+- 스케줄 알림 4종 (`lib/notifications/scheduled.ts` + Vercel Cron `vercel.json`)
+
+| 함수 | 트리거 | 등급 | 수신 |
+|---|---|---|---|
+| `checkMonthlyBalanceVerification` | 매월 말일 + 월간 체크리스트 미완료 | WARNING | auditor |
+| `checkQuarterlyAuditReminder` | 3·6·9·12월 말일 + 분기 체크리스트 미완료 | WARNING | auditor |
+| `checkSubmissionDeadline` | `resolved_at + 7일` 초과 & `status=draft` | CRITICAL | auditor |
+| `checkRemediationDeadline` | `resolved_at + 15일` 초과 & 조치 미완료 | CRITICAL | auditor + manager |
+
+- Cron 스케줄: `0 14 * * *` (UTC 14:00 = KST 23:00, 매일 실행 후 내부 조건 판단)
+- 필요 환경변수: `CRON_SECRET` (Vercel 환경변수에 설정)
 
 ### ✅ Phase 2 — 감사 보고서 PDF (`/reports`)
 - 기간(from~to) 선택 → PDF 자동 생성·다운로드
@@ -155,6 +167,7 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `POST` | `/api/receipts/validate` | 정책 4필터 검사 (P3) |
 | `GET` | `/api/notifications` | 로그인 사용자 알림 목록 조회 |
 | `PATCH` | `/api/notifications` | 알림 읽음 처리 (단건 또는 전체) |
+| `GET` | `/api/notifications/scheduled` | Vercel Cron Job 전용 — 스케줄 알림 4종 일괄 실행 (`Authorization: Bearer <CRON_SECRET>`) |
 | `GET` | `/api/reports/generate` | 감사 보고서 PDF 생성 (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) |
 | `POST` | `/api/pattern-analysis` | P4 누적 패턴 분석 (Benford's Law + ACFE 6종 탐지 + 외부감사 리스크 가중치 → audit_findings 자동 등록) |
 | `GET` | `/api/kapt` | 최신 K-apt 유사단지 비교 데이터 조회 |
@@ -179,7 +192,8 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `lib/actions/report-data.ts` | `fetchReportData` (PDF용 데이터 취합, Server Action 아님) |
 | `lib/actions/kapt.ts` | `getKaptComparison` |
 | `lib/actions/external-audits.ts` | `getExternalAudits`, `getExternalAudit`, `createExternalAudit`, `createExternalAuditFindings` |
-| `lib/notifications/create.ts` | `createNotificationsForComplex` |
+| `lib/notifications/create.ts` | `createNotificationsForComplex` (targetRoles·supabaseClient 선택 파라미터 지원) |
+| `lib/notifications/scheduled.ts` | `checkMonthlyBalanceVerification`, `checkQuarterlyAuditReminder`, `checkSubmissionDeadline`, `checkRemediationDeadline`, `runAllScheduledChecks` |
 | `lib/actions/kapt.ts` | `getKaptComparison` |
 
 ---
