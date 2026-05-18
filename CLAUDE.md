@@ -144,17 +144,24 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 - 필요 환경변수: `CRON_SECRET` (Vercel 환경변수에 설정)
 
 ### ✅ Phase 2 — 감사 보고서 PDF (`/reports`)
+서식 선택 탭 3종:
+
+**① 종합 감사보고서** (기존, `GET /api/reports/generate`)
 - 기간(from~to) 선택 → PDF 자동 생성·다운로드
 - 공동주택관리법 제26조 형식 준수 (A4, 5페이지)
-- 포함 내용:
-  - 표지: 아파트명·감사기간·감사인·서명란
-  - 제1장: 감사 결과 요약 (KPI 통계표)
-  - 제2장: 영수증 이상 건 상세 목록 (flags 포함)
-  - 제3장: 감사 지적사항 (audit_findings)
-  - 제4장: 재심의 요청 내역 및 처리 결과
-  - 제5장: 잡수입 유형별 현황
-  - 제6장: 장기수선충당금 이행 현황
-- 한글 폰트: NotoSansKR (`public/fonts/` — 로컬 woff 파일)
+- 포함: 표지·제1~6장(KPI·이상영수증·지적사항·재심의·잡수입·장기수선)
+
+**② 별지 제3-1호서식 — 분기 감사결과 보고서** (`GET /api/reports/quarterly`)
+- 파라미터: `from`, `to`, `target`(감사대상), `supervisee`(피감사인), `title`
+- 포함: 기본정보 메타테이블·지적사항 전체 목록(번호/제목/내용/심각도/상태/조치계획/조치기한)·KPI 요약 박스·서명란 3개(감사인·관리소장·입주자대표회의 의장)
+- 감사 업무규정 제5조·제6조 footer 명시
+
+**③ 별지 제3-2호서식 — 예금잔액 대조 확인 보고서** (`GET /api/reports/balance`)
+- 파라미터: `year`, `month`
+- 출력: 가로(A4 Landscape) · 8열 대조표(금융기관/용도/종류/계좌번호/장부금액/확인금액/차이금액/비고) · 10행 빈 기입란 + 합계행 · 대조확인 문구 · 서명란 2개(감사인·관리소장)
+- DB 잔액 데이터 없음 → 인쇄 후 수기 기입용 공식 서식
+
+**공통**: 한글 폰트 NotoSansKR (`public/fonts/` — 로컬 woff 파일)
 
 ---
 
@@ -168,7 +175,9 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `GET` | `/api/notifications` | 로그인 사용자 알림 목록 조회 |
 | `PATCH` | `/api/notifications` | 알림 읽음 처리 (단건 또는 전체) |
 | `GET` | `/api/notifications/scheduled` | Vercel Cron Job 전용 — 스케줄 알림 4종 일괄 실행 (`Authorization: Bearer <CRON_SECRET>`) |
-| `GET` | `/api/reports/generate` | 감사 보고서 PDF 생성 (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) |
+| `GET` | `/api/reports/generate` | 종합 감사보고서 PDF 생성 (`?from=YYYY-MM-DD&to=YYYY-MM-DD`) |
+| `GET` | `/api/reports/quarterly` | 별지 제3-1호서식 분기 감사결과 보고서 PDF (`?from&to&target&supervisee&title`) |
+| `GET` | `/api/reports/balance` | 별지 제3-2호서식 예금잔액 대조 확인 보고서 PDF (`?year=YYYY&month=M`) |
 | `POST` | `/api/pattern-analysis` | P4 누적 패턴 분석 (Benford's Law + ACFE 6종 탐지 + 외부감사 리스크 가중치 → audit_findings 자동 등록) |
 | `GET` | `/api/kapt` | 최신 K-apt 유사단지 비교 데이터 조회 |
 | `POST` | `/api/kapt` | K-apt 공공API 호출 → 유사단지 비교 → kapt_comparison upsert + [평균초과] findings 등록 |
@@ -190,6 +199,7 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 | `lib/actions/misc-income.ts` | `getMiscIncomeData`, `createMiscIncome`, `deleteMiscIncome`, `updatePaymentStatus`, `uploadMiscIncomeFile` |
 | `lib/actions/reconsideration.ts` | `getReconsiderations`, `createReconsideration`, `updateResolution`, `uploadReconDocument` |
 | `lib/actions/report-data.ts` | `fetchReportData` (PDF용 데이터 취합, Server Action 아님) |
+| `lib/actions/quarterly-report-data.ts` | `fetchQuarterlyReportData` (분기 감사결과 보고서 데이터 취합) |
 | `lib/actions/kapt.ts` | `getKaptComparison` |
 | `lib/actions/external-audits.ts` | `getExternalAudits`, `getExternalAudit`, `createExternalAudit`, `createExternalAuditFindings` |
 | `lib/notifications/create.ts` | `createNotificationsForComplex` (targetRoles·supabaseClient 선택 파라미터 지원) |
