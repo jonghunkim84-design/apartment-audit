@@ -1,6 +1,8 @@
 import { getContracts } from '@/lib/actions/contracts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ContractsClient } from '@/components/contracts/ContractsClient'
+import Link from 'next/link'
+import { BarChart3 } from 'lucide-react'
 
 function fmtKRW(n: number) {
   return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(n)
@@ -18,11 +20,20 @@ export default async function ContractsPage() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div>
-        <h1 className="text-2xl font-bold">입찰·계약 관리</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          공동주택관리법 제7조 · 주택관리업자 및 사업자 선정지침 준수 현황
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">입찰·계약 관리</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            공동주택관리법 제7조 · 주택관리업자 및 사업자 선정지침 준수 현황
+          </p>
+        </div>
+        <Link
+          href="/contracts/analysis"
+          className="flex items-center gap-1.5 text-sm text-[#5B8EC4] hover:text-[#3B72AF] font-medium shrink-0 mt-1"
+        >
+          <BarChart3 className="h-4 w-4" />
+          비교 분석
+        </Link>
       </div>
 
       {/* KPI 카드 */}

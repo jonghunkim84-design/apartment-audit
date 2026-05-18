@@ -6,11 +6,14 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, FlaskConical } from 'lucide-react'
 import { login } from '@/lib/actions/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+
+const DEMO_EMAIL = 'demo@aas-test.com'
+const DEMO_PASSWORD = 'Demo1234!'
 
 const schema = z.object({
   email: z.string().email('올바른 이메일을 입력해주세요'),
@@ -23,9 +26,14 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
   })
+
+  const fillDemo = () => {
+    setValue('email', DEMO_EMAIL)
+    setValue('password', DEMO_PASSWORD)
+  }
 
   const onSubmit = (data: FormValues) => {
     setServerError(null)
@@ -63,6 +71,28 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">감사 시스템</h1>
             <p className="text-white/70 text-sm mt-1">입주자대표회의 감사 플랫폼</p>
+          </div>
+
+          {/* 데모 버튼 */}
+          <div className="px-8 pb-2">
+            <button
+              type="button"
+              onClick={fillDemo}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 hover:bg-white/20 text-white/90 text-sm font-medium py-2.5 transition-colors"
+            >
+              <FlaskConical className="h-4 w-4 text-yellow-300" />
+              데모 계정으로 체험하기
+            </button>
+            <p className="text-center text-xs text-white/40 mt-1.5">
+              demo@aas-test.com · Demo1234!
+            </p>
+          </div>
+
+          {/* 구분선 */}
+          <div className="px-8 flex items-center gap-3">
+            <div className="flex-1 h-px bg-white/15" />
+            <span className="text-xs text-white/30">또는</span>
+            <div className="flex-1 h-px bg-white/15" />
           </div>
 
           {/* 폼 */}
