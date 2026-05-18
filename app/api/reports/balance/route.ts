@@ -1,21 +1,27 @@
 import { renderToBuffer } from '@react-pdf/renderer'
 import { BalanceReportDocument } from '@/components/reports/BalanceReportDocument'
 import { createClient } from '@/lib/supabase/server'
+import type { AccountRow } from '@/components/reports/BalanceReportDocument'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const year = parseInt(searchParams.get('year') ?? '0', 10)
-  const month = parseInt(searchParams.get('month') ?? '0', 10)
-
-  if (!year || !month || month < 1 || month > 12) {
-    return new Response('연도와 월을 올바르게 입력해 주세요.', { status: 400 })
-  }
-
+export async function POST(request: Request) {
   try {
+    const body = await request.json() as {
+      year: number
+      month: number
+      accounts: AccountRow[]
+      verificationNote: string
+    }
+
+    const { year, month, accounts, verificationNote } = body
+
+    if (!year || !month || month < 1 || month > 12) {
+      return new Response('연도와 월을 올바르게 입력해 주세요.', { status: 400 })
+    }
+
     const supabase = await createClient()
     const {
       data: { user },
@@ -45,6 +51,8 @@ export async function GET(request: Request) {
         apartmentName: apartment?.name ?? '아파트',
         auditorName: profile.full_name ?? '',
         generatedAt: new Date().toISOString(),
+        accounts: accounts ?? [],
+        verificationNote: verificationNote ?? '이상 없음',
       },
     })
     const buffer = await renderToBuffer(element)

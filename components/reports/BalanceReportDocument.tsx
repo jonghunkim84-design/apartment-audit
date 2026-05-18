@@ -50,11 +50,6 @@ const s = StyleSheet.create({
     marginBottom: 20,
     color: '#333',
   },
-  metaRow: {
-    flexDirection: 'row',
-    marginBottom: 6,
-    alignItems: 'center',
-  },
   metaLabel: {
     width: 60,
     fontWeight: 700,
@@ -164,41 +159,61 @@ const s = StyleSheet.create({
   },
 })
 
+export interface AccountRow {
+  bank: string
+  purpose: string
+  type: string
+  accountNo: string
+  bookAmount: number | null
+  confirmedAmount: number | null
+  note: string
+}
+
 export interface BalanceReportData {
   year: number
   month: number
   apartmentName: string
   auditorName: string
   generatedAt: string
+  accounts: AccountRow[]
+  verificationNote: string
 }
 
-const BLANK_ROWS = 10
-
 const MONTH_KR = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
+
+function fmt(n: number | null): string {
+  if (n === null || n === undefined) return ''
+  return n.toLocaleString('ko-KR')
+}
 
 interface Props {
   data: BalanceReportData
 }
 
 export function BalanceReportDocument({ data }: Props) {
-  const { year, month, apartmentName, auditorName, generatedAt } = data
+  const { year, month, apartmentName, auditorName, generatedAt, accounts, verificationNote } = data
   const monthStr = MONTH_KR[month - 1] ?? `${month}월`
+
+  const totalBook = accounts.reduce((s, r) => s + (r.bookAmount ?? 0), 0)
+  const totalConfirmed = accounts.reduce((s, r) => s + (r.confirmedAmount ?? 0), 0)
+  const totalDiff = totalConfirmed - totalBook
+
+  const rows = accounts.length > 0 ? accounts : Array.from({ length: 10 }, () => ({
+    bank: '', purpose: '', type: '', accountNo: '', bookAmount: null, confirmedAmount: null, note: '',
+  }))
 
   return (
     <Document>
       <Page size="A4" style={s.page} orientation="landscape">
-        {/* 서식 번호 */}
         <Text style={s.formLabel}>별지 제3-2호서식</Text>
 
-        {/* 제목 */}
         <Text style={s.mainTitle}>예금잔액 ↔ 관계장부 대조 확인 보고서</Text>
         <Text style={s.subTitle}>{year}년 {monthStr}</Text>
 
-        {/* 기본 정보 */}
         <View style={{ flexDirection: 'row', gap: 20, marginBottom: 4 }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={s.metaLabel}>단지명</Text>
-            <Text style={[s.metaValue]}>{apartmentName}</Text>
+            <Text style={s.metaValue}>{apartmentName}</Text>
           </View>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={s.metaLabel}>기준일</Text>
@@ -210,9 +225,7 @@ export function BalanceReportDocument({ data }: Props) {
           </View>
         </View>
 
-        {/* 대조 표 */}
         <View style={s.table}>
-          {/* 헤더 */}
           <View style={s.tableHead}>
             <Text style={[s.th, { width: 30 }]}>번호</Text>
             <Text style={[s.th, { width: 70 }]}>금융기관</Text>
@@ -225,47 +238,56 @@ export function BalanceReportDocument({ data }: Props) {
             <Text style={[s.th, { flex: 2 }]}>비고</Text>
           </View>
 
-          {/* 빈 데이터 행 */}
-          {Array.from({ length: BLANK_ROWS }).map((_, i) => (
-            <View key={i} style={s.tableRow}>
-              <Text style={[s.td, { width: 30, textAlign: 'center' }]}>{i + 1}</Text>
-              <Text style={[s.td, { width: 70 }]}> </Text>
-              <Text style={[s.td, { width: 70 }]}> </Text>
-              <Text style={[s.td, { width: 50 }]}> </Text>
-              <Text style={[s.td, { flex: 2 }]}> </Text>
-              <Text style={[s.td, { flex: 1.5, textAlign: 'right' }]}> </Text>
-              <Text style={[s.td, { flex: 1.5, textAlign: 'right' }]}> </Text>
-              <Text style={[s.td, { flex: 1.5, textAlign: 'right' }]}> </Text>
-              <Text style={[s.td, { flex: 2 }]}> </Text>
-            </View>
-          ))}
+          {rows.map((row, i) => {
+            const diff = (row.confirmedAmount ?? 0) - (row.bookAmount ?? 0)
+            const diffStr = row.bookAmount !== null && row.confirmedAmount !== null
+              ? (diff >= 0 ? '' : '-') + Math.abs(diff).toLocaleString('ko-KR')
+              : ''
+            return (
+              <View key={i} style={s.tableRow}>
+                <Text style={[s.td, { width: 30, textAlign: 'center' }]}>{i + 1}</Text>
+                <Text style={[s.td, { width: 70 }]}>{row.bank}</Text>
+                <Text style={[s.td, { width: 70 }]}>{row.purpose}</Text>
+                <Text style={[s.td, { width: 50 }]}>{row.type}</Text>
+                <Text style={[s.td, { flex: 2 }]}>{row.accountNo}</Text>
+                <Text style={[s.td, { flex: 1.5, textAlign: 'right' }]}>{fmt(row.bookAmount)}</Text>
+                <Text style={[s.td, { flex: 1.5, textAlign: 'right' }]}>{fmt(row.confirmedAmount)}</Text>
+                <Text style={[s.td, { flex: 1.5, textAlign: 'right' }]}>{diffStr}</Text>
+                <Text style={[s.td, { flex: 2 }]}>{row.note}</Text>
+              </View>
+            )
+          })}
 
-          {/* 합계 행 */}
           <View style={s.tableRowTotal}>
             <Text style={[s.tdTotal, { width: 30, textAlign: 'center' }]}> </Text>
             <Text style={[s.tdTotal, { width: 70 }]}> </Text>
             <Text style={[s.tdTotal, { width: 70 }]}> </Text>
             <Text style={[s.tdTotal, { width: 50, textAlign: 'center' }]}>합계</Text>
             <Text style={[s.tdTotal, { flex: 2 }]}> </Text>
-            <Text style={[s.tdTotal, { flex: 1.5, textAlign: 'right' }]}> </Text>
-            <Text style={[s.tdTotal, { flex: 1.5, textAlign: 'right' }]}> </Text>
-            <Text style={[s.tdTotal, { flex: 1.5, textAlign: 'right' }]}> </Text>
+            <Text style={[s.tdTotal, { flex: 1.5, textAlign: 'right' }]}>
+              {accounts.length > 0 ? totalBook.toLocaleString('ko-KR') : ''}
+            </Text>
+            <Text style={[s.tdTotal, { flex: 1.5, textAlign: 'right' }]}>
+              {accounts.length > 0 ? totalConfirmed.toLocaleString('ko-KR') : ''}
+            </Text>
+            <Text style={[s.tdTotal, { flex: 1.5, textAlign: 'right' }]}>
+              {accounts.length > 0
+                ? (totalDiff >= 0 ? '' : '-') + Math.abs(totalDiff).toLocaleString('ko-KR')
+                : ''}
+            </Text>
             <Text style={[s.tdTotal, { flex: 2 }]}> </Text>
           </View>
         </View>
 
-        {/* 대조 확인 문구 */}
         <View style={s.verifyBox}>
           <Text style={s.verifyText}>
-            위와 같이 {year}년 {monthStr} 말 현재 예금잔액을 금융기관 잔액증명서와 관리비 관계장부를 대조 확인하였으며,
-            장부금액과 확인금액이 일치(또는 상이)함을 확인합니다.
+            {verificationNote || `위와 같이 ${year}년 ${monthStr} 말 현재 예금잔액을 금융기관 잔액증명서와 관리비 관계장부를 대조 확인하였으며, 장부금액과 확인금액이 일치(또는 상이)함을 확인합니다.`}
           </Text>
           <Text style={[s.verifyText, { marginTop: 6, color: '#555' }]}>
             ※ 「공동주택관리법」 제26조 및 동법 시행규칙 별지 제3-2호서식에 따라 작성하였습니다.
           </Text>
         </View>
 
-        {/* 서명란 */}
         <View style={s.signatureSect}>
           <Text style={s.signatureTitle}>확인 서명</Text>
           <View style={s.signatureRow}>
@@ -281,7 +303,7 @@ export function BalanceReportDocument({ data }: Props) {
         </View>
 
         <Text style={s.footerNote}>
-          공동주택관리법 시행규칙 별지 제3-2호서식 — 매월 말일 예금잔액 ↔ 관계장부 대조 확인용
+          공동주택관리법 시행규칙 별지 제3-2호서식 — 매월 말 예금잔액 ↔ 관계장부 대조 확인용
         </Text>
       </Page>
     </Document>

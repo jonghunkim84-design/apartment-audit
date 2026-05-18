@@ -276,6 +276,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "audit_findings_external_audit_id_fkey"
+            columns: ["external_audit_id"]
+            isOneToOne: false
+            referencedRelation: "external_audits"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "audit_findings_receipt_id_fkey"
             columns: ["receipt_id"]
             isOneToOne: false
@@ -335,6 +342,44 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_balance_checks: {
+        Row: {
+          accounts: Json
+          apartment_complex_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          verification_note: string
+          year_month: string
+        }
+        Insert: {
+          accounts?: Json
+          apartment_complex_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          verification_note?: string
+          year_month: string
+        }
+        Update: {
+          accounts?: Json
+          apartment_complex_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          verification_note?: string
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_balance_checks_apartment_complex_id_fkey"
+            columns: ["apartment_complex_id"]
+            isOneToOne: false
+            referencedRelation: "apartment_complexes"
             referencedColumns: ["id"]
           },
         ]
@@ -418,7 +463,7 @@ export type Database = {
           audit_year: number
           auditor_name: string | null
           complex_id: string | null
-          created_at: string
+          created_at: string | null
           created_by: string | null
           id: string
           opinion: string | null
@@ -432,7 +477,7 @@ export type Database = {
           audit_year: number
           auditor_name?: string | null
           complex_id?: string | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           opinion?: string | null
@@ -446,7 +491,7 @@ export type Database = {
           audit_year?: number
           auditor_name?: string | null
           complex_id?: string | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           opinion?: string | null
@@ -1141,6 +1186,7 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
@@ -1259,16 +1305,45 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      anomaly_detection_type: ["benfords_law", "acfe_pattern", "statistical_outlier"],
+      anomaly_detection_type: [
+        "benfords_law",
+        "acfe_pattern",
+        "statistical_outlier",
+      ],
       anomaly_status: ["open", "investigating", "resolved", "false_positive"],
       checklist_item_status: ["pending", "pass", "fail", "na"],
       checklist_status: ["draft", "in_progress", "completed"],
       contract_status: ["active", "expired", "terminated"],
-      contract_type: ["service", "construction", "supply", "other", "bid", "private_contract"],
-      misc_income_category: ["parking", "rental", "interest", "penalty", "other", "recycling"],
+      contract_type: [
+        "service",
+        "construction",
+        "supply",
+        "other",
+        "bid",
+        "private_contract",
+      ],
+      misc_income_category: [
+        "parking",
+        "rental",
+        "interest",
+        "penalty",
+        "other",
+        "recycling",
+      ],
       notification_severity: ["INFO", "WARNING", "CRITICAL"],
-      policy_check_type: ["split_payment", "time_restriction", "prohibited_category", "limit_exceeded"],
-      receipt_status: ["pending", "processing", "manual_review", "approved", "rejected"],
+      policy_check_type: [
+        "split_payment",
+        "time_restriction",
+        "prohibited_category",
+        "limit_exceeded",
+      ],
+      receipt_status: [
+        "pending",
+        "processing",
+        "manual_review",
+        "approved",
+        "rejected",
+      ],
       reconsideration_status: ["SENT", "RECEIVED", "RESOLVED", "ESCALATED"],
       report_status: ["draft", "review", "published"],
       report_type: ["monthly", "quarterly", "annual", "special"],

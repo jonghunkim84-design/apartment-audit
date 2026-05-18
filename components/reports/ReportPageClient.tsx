@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { FileDown, Loader2, AlertCircle, FileText } from 'lucide-react'
+import { BalanceInputModal } from './BalanceInputModal'
 
 type ReportType = 'annual' | 'quarterly' | 'balance'
 
@@ -47,6 +48,7 @@ export function ReportPageClient() {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [balanceModalOpen, setBalanceModalOpen] = useState(false)
 
   async function handleDownload() {
     setError(null)
@@ -76,9 +78,9 @@ export function ReportPageClient() {
         filename = `분기감사결과_${qFrom}_${qTo}.pdf`
 
       } else {
-        if (!balYear || !balMonth) { setError('연도와 월을 입력해 주세요.'); setLoading(false); return }
-        url = `/api/reports/balance?year=${balYear}&month=${balMonth}`
-        filename = `예금잔액대조_${balYear}년${balMonth}월.pdf`
+        // balance handled by BalanceInputModal
+        setLoading(false)
+        return
       }
 
       const res = await fetch(url)
@@ -228,37 +230,21 @@ export function ReportPageClient() {
           {/* ── 예금잔액 대조 확인 ── */}
           {reportType === 'balance' && (
             <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="by" className="text-sm font-medium">연도</label>
-                  <Input
-                    id="by"
-                    type="number"
-                    min={2000}
-                    max={2099}
-                    value={balYear}
-                    onChange={(e) => setBalYear(parseInt(e.target.value, 10))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="bm" className="text-sm font-medium">월</label>
-                  <Input
-                    id="bm"
-                    type="number"
-                    min={1}
-                    max={12}
-                    value={balMonth}
-                    onChange={(e) => setBalMonth(parseInt(e.target.value, 10))}
-                  />
-                </div>
+              <div className="rounded-md border bg-muted/30 p-4 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">입력 후 PDF 생성</p>
+                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>계좌별 금융기관·용도·종류·계좌번호·장부금액·확인금액 직접 입력</p>
+                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>차이금액 자동 계산 + 합계 자동 계산</p>
+                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>이전 월 계좌 정보 자동 불러오기 (금액은 초기화)</p>
+                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>가로(A4 Landscape) 출력 — 별지 제3-2호서식</p>
               </div>
-              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
-                <p className="text-xs font-semibold text-muted-foreground mb-1">출력 내용</p>
-                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>8열 대조표 (금융기관·용도·종류·계좌번호·장부금액·확인금액·차이금액·비고)</p>
-                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>10행 빈 기입란 + 합계행</p>
-                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>대조 확인 문구 및 감사인·관리소장 서명란</p>
-                <p className="text-xs text-muted-foreground flex gap-1.5"><span className="text-primary">·</span>가로(A4 Landscape) 출력</p>
-              </div>
+              <Button
+                onClick={() => setBalanceModalOpen(true)}
+                className="w-full"
+                size="lg"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                금액 입력 및 PDF 생성
+              </Button>
             </>
           )}
 
@@ -269,25 +255,32 @@ export function ReportPageClient() {
             </div>
           )}
 
-          <Button onClick={handleDownload} disabled={loading} className="w-full" size="lg">
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                PDF 생성 중… (한글 폰트 로딩 포함 30초 내외)
-              </>
-            ) : (
-              <>
-                <FileDown className="h-4 w-4 mr-2" />
-                PDF 다운로드
-              </>
-            )}
-          </Button>
+          {reportType !== 'balance' && (
+            <Button onClick={handleDownload} disabled={loading} className="w-full" size="lg">
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  PDF 생성 중… (한글 폰트 로딩 포함 30초 내외)
+                </>
+              ) : (
+                <>
+                  <FileDown className="h-4 w-4 mr-2" />
+                  PDF 다운로드
+                </>
+              )}
+            </Button>
+          )}
 
           <p className="text-xs text-muted-foreground text-center">
             공동주택관리법 제26조 · A4 PDF · 한글 지원
           </p>
         </CardContent>
       </Card>
+
+      <BalanceInputModal
+        open={balanceModalOpen}
+        onClose={() => setBalanceModalOpen(false)}
+      />
     </div>
   )
 }
