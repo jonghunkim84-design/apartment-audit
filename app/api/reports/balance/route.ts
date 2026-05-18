@@ -1,19 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
-import React from 'react'
 import { BalanceReportDocument } from '@/components/reports/BalanceReportDocument'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const year = parseInt(searchParams.get('year') ?? '0', 10)
   const month = parseInt(searchParams.get('month') ?? '0', 10)
 
   if (!year || !month || month < 1 || month > 12) {
-    return NextResponse.json({ error: '연도와 월을 올바르게 입력해 주세요.' }, { status: 400 })
+    return new Response('연도와 월을 올바르게 입력해 주세요.', { status: 400 })
   }
 
   try {
@@ -21,7 +20,7 @@ export async function GET(request: NextRequest) {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) return new Response('로그인이 필요합니다.', { status: 401 })
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -30,7 +29,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (!profile?.apartment_complex_id) {
-      return NextResponse.json({ error: 'No apartment complex' }, { status: 400 })
+      return new Response('아파트 단지가 설정되지 않았습니다.', { status: 400 })
     }
 
     const { data: apartment } = await supabase
@@ -39,26 +38,32 @@ export async function GET(request: NextRequest) {
       .eq('id', profile.apartment_complex_id)
       .single()
 
-    const buffer = await renderToBuffer(
-      React.createElement(BalanceReportDocument, {
-        data: {
-          year,
-          month,
-          apartmentName: apartment?.name ?? '아파트',
-          auditorName: profile.full_name ?? '',
-          generatedAt: new Date().toISOString(),
-        },
-      }),
-    )
+    const element = BalanceReportDocument({
+      data: {
+        year,
+        month,
+        apartmentName: apartment?.name ?? '아파트',
+        auditorName: profile.full_name ?? '',
+        generatedAt: new Date().toISOString(),
+      },
+    })
+    const buffer = await renderToBuffer(element)
 
-    return new NextResponse(buffer, {
+    const filename = `예금잔액대조_${year}년${month}월.pdf`
+
+    return new Response(new Uint8Array(buffer), {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(`예금잔액대조_${year}년${month}월.pdf`)}`,
+        'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+        'Cache-Control': 'no-store',
       },
     })
   } catch (err) {
+    const message = err instanceof Error ? err.message : '알 수 없는 오류'
+    if (message === 'Unauthorized') {
+      return new Response('로그인이 필요합니다.', { status: 401 })
+    }
     console.error('[balance report]', err)
-    return NextResponse.json({ error: '보고서 생성 중 오류가 발생했습니다.' }, { status: 500 })
+    return new Response(`보고서 생성 실패: ${message}`, { status: 500 })
   }
 }
