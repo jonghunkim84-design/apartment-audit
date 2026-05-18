@@ -18,12 +18,19 @@ const KR_HOLIDAYS = new Set([
 // ── 정책 한도 (원 단위) ───────────────────────────────────────────────────────
 
 const LIMITS: Record<string, number> = {
-  식대: 30_000,
-  식비: 30_000,
+  식대: 20_000,        // 제45조: 1인당 20,000원
+  식비: 20_000,        // 제45조: 1인당 20,000원
   접대비: 50_000,
   출장비: 100_000,
+  출석수당: 50_000,    // 제45조: 1회 한도
+  출석수당_월: 200_000, // 제45조: 동일인 월 합산 한도
   DEFAULT: 100_000,
 }
+
+// ── 추가 기준 임계값 (원 단위) ────────────────────────────────────────────────
+
+const BID_THRESHOLD = 700_000_000          // 공사·용역 입찰 의무 기준
+const RESIDENT_INSPECTION_THRESHOLD = 10_000_000  // 주민검수 대상 기준
 
 function getCategoryLimit(category: string | null): number {
   return LIMITS[category ?? ''] ?? LIMITS.DEFAULT
@@ -182,7 +189,7 @@ export async function POST(request: NextRequest) {
     const amount = receipt.amount ?? 0
     const limitViolations: PolicyFlag[] = []
 
-    // 4-1: 식대/식비 — 건당 30,000원 초과
+    // 4-1: 식대/식비 — 1인당 20,000원 초과 (제45조)
     if ((category === '식비' || category === '식대') && amount > LIMITS['식대']) {
       limitViolations.push({
         type: '한도초과', 항목: '식대',
@@ -217,6 +224,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4-4: 출석수당 — 1회 50,000원 초과 (제45조)
+    if (category === '출석수당' && amount > LIMITS['출석수당']) {
+      limitViolations.push({
+        type: '수당한도초과', 항목: '출석수당',
+        한도: LIMITS['출석수당'], 실제금액: amount,
+      })
+    }
+
+    // 4-5: 출석수당 — 동일 인물(reviewed_by) 월 합계 200,000원 초과 (제45조)
+    if (category === '출석수당' && receipt.receipt_date && receipt.reviewed_by) {
+      const monthStart = receipt.receipt_date.slice(0, 7) + '-01'
+      const nextMonth  = new Date(monthStart)
+      nextMonth.setMonth(nextMonth.getMonth() + 1)
+      const monthEnd = new Date(nextMonth.getTime() - 86_400_000).toISOString().slice(0, 10)
+
+      const { data: monthlyAllowances } = await supabase
+        .from('receipts')
+        .select('amount')
+        .eq('merchant_category', '출석수당')
+        .eq('apartment_complex_id', profile.apartment_complex_id)
+        .eq('reviewed_by', receipt.reviewed_by)
+        .gte('receipt_date', monthStart)
+        .lte('receipt_date', monthEnd)
+
+      const monthlyTotal = (monthlyAllowances ?? []).reduce((sum, r) => sum + (r.amount ?? 0), 0)
+
+      if (monthlyTotal > LIMITS['출석수당_월']) {
+        limitViolations.push({
+          type: '월수당한도초과', 항목: '출석수당',
+          한도: LIMITS['출석수당_월'], 월합계: monthlyTotal,
+          reviewer_id: receipt.reviewed_by,
+        })
+      }
+    }
+
     // 사유서 첨부 여부 확인 (review_note에 "사유서" 포함 시 첨부로 간주)
     // 미첨부 시 → FLAGGED
     const isLimitViolation = limitViolations.length > 0
@@ -240,6 +282,74 @@ export async function POST(request: NextRequest) {
         위반사항: limitViolations,
       } as Json,
     })
+
+    // ── 필터 5: 입찰 의무 위반 ────────────────────────────────────────────────────
+    // 공사: 단건 7억 이상 → contracts 입찰 기록 없으면 위반
+    // 용역: 동일 사업자 연간 합계 7억 이상 → contracts 입찰 기록 없으면 위반
+    if ((category === '공사' || category === '용역') && receipt.business_number) {
+      let bidRequired = false
+      const bidDetail: Record<string, unknown> = { 입찰의무: true, 카테고리: category }
+
+      if (category === '공사' && amount >= BID_THRESHOLD) {
+        bidRequired = true
+        bidDetail['사유'] = '공사 단건 금액'
+        bidDetail['금액'] = amount
+        bidDetail['기준'] = BID_THRESHOLD
+      } else if (category === '용역' && receipt.receipt_date) {
+        const yearStart = receipt.receipt_date.slice(0, 4) + '-01-01'
+        const yearEnd   = receipt.receipt_date.slice(0, 4) + '-12-31'
+
+        const { data: yearlyService } = await supabase
+          .from('receipts')
+          .select('amount')
+          .eq('merchant_category', '용역')
+          .eq('apartment_complex_id', profile.apartment_complex_id)
+          .eq('business_number', receipt.business_number)
+          .gte('receipt_date', yearStart)
+          .lte('receipt_date', yearEnd)
+
+        const yearlyTotal = (yearlyService ?? []).reduce((sum, r) => sum + (r.amount ?? 0), 0)
+        if (yearlyTotal >= BID_THRESHOLD) {
+          bidRequired = true
+          bidDetail['사유'] = '용역 연간 합계'
+          bidDetail['연간합계'] = yearlyTotal
+          bidDetail['기준'] = BID_THRESHOLD
+        }
+      }
+
+      if (bidRequired) {
+        const { data: bidContracts } = await supabase
+          .from('contracts')
+          .select('id')
+          .eq('apartment_complex_id', profile.apartment_complex_id)
+          .eq('business_number', receipt.business_number)
+          .eq('contract_type', '입찰')
+          .limit(1)
+
+        const hasBid = (bidContracts ?? []).length > 0
+        bidDetail['입찰기록존재'] = hasBid
+
+        checks.push({
+          receipt_id: receiptId,
+          check_type: 'limit_exceeded',
+          is_violation: !hasBid,
+          details: bidDetail as Json,
+        })
+
+        if (!hasBid) {
+          flags.push({ type: '입찰의무위반', ...bidDetail })
+        }
+      }
+    }
+
+    // ── 필터 6: 주민검수 대상 표시 ────────────────────────────────────────────
+    // 유지보수·수선 카테고리, 1,000만원 이상 → 플래그만 추가 (confidence 유지)
+    if ((category === '유지보수' || category === '수선') && amount >= RESIDENT_INSPECTION_THRESHOLD) {
+      flags.push({
+        type: '주민검수대상', 항목: category,
+        금액: amount, 기준: RESIDENT_INSPECTION_THRESHOLD,
+      })
+    }
 
     // ── receipt_policy_checks 저장 (기존 기록 교체) ───────────────────────────
     await supabase
