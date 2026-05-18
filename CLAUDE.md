@@ -138,11 +138,13 @@ AI는 제안만 하고, 최종 승인/반려는 반드시 사람(감사)이 한�
 |---|---|---|---|
 | `checkMonthlyBalanceVerification` | 매월 말일 + 월간 체크리스트 미완료 | WARNING | auditor |
 | `checkQuarterlyAuditReminder` | 3·6·9·12월 말일 + 분기 체크리스트 미완료 | WARNING | auditor |
-| `checkSubmissionDeadline` | `resolved_at + 7일` 초과 & `status=draft` | CRITICAL | auditor |
-| `checkRemediationDeadline` | `resolved_at + 15일` 초과 & 조치 미완료 | CRITICAL | auditor + manager |
+| `checkSubmissionDeadline` | `resolved_at + 7일` 초과 & `status IN ['open','investigating']` | CRITICAL | auditor |
+| `checkRemediationDeadline` | `resolved_at + 15일` 초과 & `remediation_status != 'completed'` | CRITICAL | auditor + manager |
 
 - Cron 스케줄: `0 14 * * *` (UTC 14:00 = KST 23:00, 매일 실행 후 내부 조건 판단)
 - 필요 환경변수: `CRON_SECRET` (Vercel 환경변수에 설정)
+- `audit_findings.status` 허용값: `open|investigating|resolved|dismissed` (`draft` 없음 — 2026-05-18 버그 수정)
+- `audit_findings` 컬럼 매핑: `reported_at` → `resolved_at`, `status='reported'` → `status='resolved'`
 
 ### ✅ Phase 2 — 감사 보고서 PDF (`/reports`)
 서식 선택 탭 3종:
