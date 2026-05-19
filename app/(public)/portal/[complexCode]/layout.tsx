@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import Script from 'next/script'
 import { Building2, ShieldCheck } from 'lucide-react'
+import { DifyChatbot } from '@/components/portal/DifyChatbot'
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
   return (
@@ -25,31 +25,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
           본 포털은 공동주택관리법 제26조에 따라 입주자대표회의가 의무적으로 공개하는 정보입니다.
         </div>
       </footer>
-
-      <Script id="dify-config" strategy="beforeInteractive">
-        {`
-          window.difyChatbotConfig = {
-            token: '9ettBQc3zHphX7jV',
-            inputs: {},
-            systemVariables: {},
-            userVariables: {},
-          }
-        `}
-      </Script>
-      <Script
-        src="https://udify.app/embed.min.js"
-        id="9ettBQc3zHphX7jV"
-        strategy="afterInteractive"
-      />
-      <style>{`
-        #dify-chatbot-bubble-button {
-          background-color: #1C64F2 !important;
-        }
-        #dify-chatbot-bubble-window {
-          width: 24rem !important;
-          height: 40rem !important;
-        }
-      `}</style>
+      <DifyChatbot />
     </div>
   )
 }
