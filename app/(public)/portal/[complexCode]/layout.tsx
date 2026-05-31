@@ -1,8 +1,26 @@
 import type { ReactNode } from 'react'
 import { Building2, ShieldCheck } from 'lucide-react'
-import { DifyChatbot } from '@/components/portal/DifyChatbot'
+import { PortalChatbot } from '@/components/portal/PortalChatbot'
+import { createPublicClient } from '@/lib/supabase/public'
 
-export default function PortalLayout({ children }: { children: ReactNode }) {
+export default async function PortalLayout({
+  children,
+  params,
+}: {
+  children: ReactNode
+  params: Promise<{ complexCode: string }>
+}) {
+  const { complexCode } = await params
+  const supabase = createPublicClient()
+
+  const { data: complex } = await supabase
+    .from('apartment_complexes')
+    .select('name')
+    .eq('public_code', complexCode)
+    .single()
+
+  const complexName = complex?.name ?? '아파트'
+
   return (
     <div className="min-h-screen bg-slate-100">
       <header className="bg-white border-b border-slate-200 shadow-sm">
@@ -25,7 +43,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
           본 포털은 공동주택관리법 제26조에 따라 입주자대표회의가 의무적으로 공개하는 정보입니다.
         </div>
       </footer>
-      <DifyChatbot />
+      <PortalChatbot complexCode={complexCode} complexName={complexName} />
     </div>
   )
 }
