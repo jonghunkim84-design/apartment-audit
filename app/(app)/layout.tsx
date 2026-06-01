@@ -23,8 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-slate-100">
       <Sidebar role={profile?.role ?? undefined} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 shrink-0 bg-slate-800 flex items-center justify-between px-6 gap-3">
-          <span className="text-sm font-semibold text-slate-300">입주자대표회의 감사시스템</span>
+        <header className="h-14 shrink-0 bg-slate-800 flex items-center justify-end px-6 gap-3">
           <div className="flex items-center gap-3">
             <NotificationBell userId={user.id} />
             <span className="text-sm text-slate-400">{user?.email}</span>
