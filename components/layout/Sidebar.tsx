@@ -25,6 +25,7 @@ import {
   CalendarDays,
   Package,
   Search,
+  HelpCircle,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -50,6 +51,7 @@ const COUNCIL_ITEMS = [
   { href: '/council/reports/annual',           label: '연간 마무리',   icon: CalendarDays,  exact: false },
   { href: '/council/handover',                 label: '인수인계',      icon: Package,       exact: false },
   { href: '/council/search',                   label: '지식 검색',     icon: Search,        exact: false },
+  { href: '/council/help',                     label: '사용 안내',     icon: HelpCircle,    exact: false },
 ]
 
 const AUDITOR_ITEMS = [
