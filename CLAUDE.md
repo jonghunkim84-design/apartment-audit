@@ -305,3 +305,55 @@ types/
 - [ ] 공개 포털 (입주민 열람용)
 - [ ] 계약 비교 분석 (낙찰률·단가 이상 탐지)
 - [ ] 모바일 최적화
+
+---
+
+## 대표회의 운영 관리 시스템 (council) — 완성 (2026-06-01)
+
+### 개요
+감사 시스템에 통합된 입주자대표회의 운영 관리 모듈. `/council` 경로 하위.
+참조 명세: `apt-council-system-spec.md` + P2·P3P4·P5P6 워크플로우 문서
+
+### DB 스키마 (Supabase에 순서대로 실행)
+| 파일 | 테이블 | 상태 |
+|------|--------|------|
+| `scripts/council_schema.sql` | council_terms, council_meetings, council_meeting_minutes, council_decisions, council_actions | ✅ 적용됨 |
+| `scripts/council_schema_phase2.sql` | council_quarterly_reports | ✅ 적용됨 |
+| `scripts/council_schema_phase3.sql` | council_handovers | ✅ 적용됨 |
+
+### 페이지 구조
+```
+/council                    — 운영 대시보드
+/council/meetings           — 회의 목록 (유형 필터)
+/council/meetings/new       — 회의 등록 3단계 위저드
+/council/meetings/[id]      — 회의 상세 (4단 회의록 + 액션)
+/council/actions            — 액션 칸반 (데스크톱) + 목록 (모바일)
+/council/reports/quarterly  — 분기 보고서 (KPI 4종 + 컴플 6항목 + AI 분석)
+/council/reports/annual     — 연간 마무리 (Q1-Q4 차트 + 이월 처리 + 공지 문구)
+/council/handover           — 인수인계 (체크리스트 + 신임 온보딩)
+/council/search             — 지식 검색 (자연어 + Gemini 요약)
+```
+
+### API 엔드포인트
+| 경로 | 설명 |
+|------|------|
+| `POST /api/council/generate-minutes` | Gemini 2.5 Flash → 4단 회의록 자동 생성 |
+| `POST /api/council/generate-quarterly` | 분기 KPI 집계 + 컴플 점검 + Gemini AI 분석 |
+| `GET  /api/council/scheduled` | Vercel Cron (KST 09:00) — D-7/D-3/D-0 알림 + overdue 자동 변경 |
+| `POST /api/council/search` | 회의·결정·액션 자연어 검색 + Gemini 요약 |
+
+### Server Actions
+| 파일 | 함수 |
+|------|------|
+| `lib/actions/council.ts` | getMeetings, getMeeting, createMeeting, updateAction, completeAction, escalateAction 등 |
+| `lib/actions/council-reports.ts` | getQuarterlyReports, generateQuarterlyReport, getAnnualData, executeCarryover |
+| `lib/actions/council-handover.ts` | getLatestHandover, saveHandover, completeHandover, getPendingActionsCount |
+
+### 환경변수 (Vercel에 등록 필요)
+- `CRON_SECRET` — 스케줄러 인증키 (.env.local에 있는 값과 동일하게 Vercel에 등록)
+- `NEXT_PUBLIC_SITE_URL` — 이미 등록됨
+
+### AI 모델
+- 회의록 생성: `gemini-2.5-flash`
+- 분기 분석: `gemini-2.5-flash`
+- 지식 검색 요약: `gemini-2.5-flash`

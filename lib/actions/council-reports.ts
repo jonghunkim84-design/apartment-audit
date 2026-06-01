@@ -82,6 +82,7 @@ export async function generateQuarterlyReport(year: number, quarter: number): Pr
   const cookieHeader = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ')
 
   const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
 
