@@ -66,12 +66,14 @@ export function Sidebar({ role }: { role?: string }) {
 
   return (
     <aside className="w-60 shrink-0 flex flex-col" style={{ backgroundColor: '#8BADD9' }}>
-      <div className="h-14 flex items-center gap-2.5 px-5 border-b" style={{ borderColor: '#7A9FD0' }}>
-        <ShieldCheck className="h-5 w-5 text-white" />
-        <span className="font-semibold text-sm leading-tight text-white">
-          입주자대표회의<br />
-          <span className="text-blue-100 font-normal">감사시스템</span>
-        </span>
+      <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: '#7A9FD0', background: 'rgba(0,0,0,0.18)' }}>
+        <div className="shrink-0 w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+          <ShieldCheck className="h-5 w-5 text-white" />
+        </div>
+        <div className="leading-snug">
+          <p className="text-white font-bold text-[15px] tracking-tight">입주자대표회의</p>
+          <p className="text-blue-100 text-xs font-medium tracking-widest uppercase">감사시스템</p>
+        </div>
       </div>
 
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
