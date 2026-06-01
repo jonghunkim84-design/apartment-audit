@@ -3,6 +3,10 @@
     {
       "path": "/api/notifications/scheduled",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/council/scheduled",
+      "schedule": "0 0 * * *"
     }
   ]
 }

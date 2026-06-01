@@ -21,6 +21,10 @@ import {
   Building2,
   ClipboardList,
   CheckSquare,
+  BarChart2,
+  CalendarDays,
+  Package,
+  Search,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -39,9 +43,13 @@ const NAV_ITEMS = [
 ]
 
 const COUNCIL_ITEMS = [
-  { href: '/council',          label: '운영 대시보드', icon: Building2,     exact: true },
-  { href: '/council/meetings', label: '회의 목록',     icon: ClipboardList, exact: false },
-  { href: '/council/actions',  label: '액션 현황',     icon: CheckSquare,   exact: false },
+  { href: '/council',                          label: '운영 대시보드', icon: Building2,     exact: true },
+  { href: '/council/meetings',                 label: '회의 목록',     icon: ClipboardList, exact: false },
+  { href: '/council/actions',                  label: '액션 현황',     icon: CheckSquare,   exact: false },
+  { href: '/council/reports/quarterly',        label: '분기 보고서',   icon: BarChart2,     exact: false },
+  { href: '/council/reports/annual',           label: '연간 마무리',   icon: CalendarDays,  exact: false },
+  { href: '/council/handover',                 label: '인수인계',      icon: Package,       exact: false },
+  { href: '/council/search',                   label: '지식 검색',     icon: Search,        exact: false },
 ]
 
 const AUDITOR_ITEMS = [
