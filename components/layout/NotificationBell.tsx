@@ -122,7 +122,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       <Button
         variant="ghost"
         size="icon"
-        className="relative"
+        className="relative text-slate-300 hover:text-slate-100 hover:bg-slate-700"
         onClick={() => setOpen((o) => !o)}
         aria-label="알림"
       >
