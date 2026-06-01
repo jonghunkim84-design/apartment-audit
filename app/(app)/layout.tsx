@@ -23,14 +23,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex h-screen overflow-hidden bg-slate-100">
       <Sidebar role={profile?.role ?? undefined} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-14 shrink-0 border-b border-zinc-200 bg-white flex items-center justify-end px-6 gap-3">
-          <NotificationBell userId={user.id} />
-          <span className="text-sm text-zinc-500">{user?.email}</span>
-          <form action={logout}>
-            <Button variant="ghost" size="sm" type="submit" className="text-zinc-600 hover:text-zinc-900">
-              로그아웃
-            </Button>
-          </form>
+        <header className="h-14 shrink-0 bg-slate-800 flex items-center justify-between px-6 gap-3">
+          <span className="text-sm font-semibold text-slate-300">입주자대표회의 감사시스템</span>
+          <div className="flex items-center gap-3">
+            <NotificationBell userId={user.id} />
+            <span className="text-sm text-slate-400">{user?.email}</span>
+            <form action={logout}>
+              <Button variant="ghost" size="sm" type="submit" className="text-slate-400 hover:text-slate-200 hover:bg-slate-700">
+                로그아웃
+              </Button>
+            </form>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto p-8">
           {children}
