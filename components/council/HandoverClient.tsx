@@ -8,9 +8,10 @@ import {
 import Link from 'next/link'
 import {
   saveHandover, completeHandover,
-  DEFAULT_CHECKLIST,
 } from '@/lib/actions/council-handover'
-import type { Handover, ChecklistItem } from '@/lib/actions/council-handover'
+import type { Handover } from '@/lib/actions/council-handover'
+import { DEFAULT_CHECKLIST } from '@/lib/council-handover-constants'
+import type { ChecklistItem } from '@/lib/council-handover-constants'
 
 const SECTION_LABEL: Record<string, string> = {
   A: 'A. 단지 현황',
