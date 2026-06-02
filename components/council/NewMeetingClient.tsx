@@ -254,7 +254,7 @@ export function NewMeetingClient({ activeTerm }: Props) {
             className="w-full bg-[#8BADD9] text-white py-2.5 rounded-xl font-medium text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {generating
-              ? <><Loader2 className="h-4 w-4 animate-spin" />AI 회의록 생성 중 (10~30초)...</>
+              ? <><Loader2 className="h-4 w-4 animate-spin" />AI 회의록 생성 중 (최대 60초)...</>
               : <><Bot className="h-4 w-4" />AI 회의록 자동 생성</>
             }
           </button>
