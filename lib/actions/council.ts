@@ -146,6 +146,7 @@ export async function updateMeeting(id: string, input: Partial<{
   quorum_present: number
   quorum_met: boolean
   location: string
+  recording_consent_confirmed: boolean
 }>): Promise<void> {
   const { supabase, db, complexId } = await getComplexId()
   const { error } = await db

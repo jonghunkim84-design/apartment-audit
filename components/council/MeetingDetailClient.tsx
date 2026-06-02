@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import { publishMinutes, updateActionStatus } from '@/lib/actions/council'
-import { CheckCircle2, Clock, AlertTriangle, FileText, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { CheckCircle2, Clock, AlertTriangle, FileText, ChevronDown, ChevronUp, Loader2, PlayCircle } from 'lucide-react'
 import type { CouncilMeeting, CouncilAction, ActionStatus } from '@/lib/council-types'
 import { MEETING_TYPE_LABEL, ACTION_STATUS_LABEL, LEGAL_TYPE_LABEL } from '@/lib/council-types'
+import { CompleteMeetingFlow } from './CompleteMeetingFlow'
 
 const ACTION_STATUS_COLOR: Record<ActionStatus, string> = {
   pending:     'bg-slate-100 text-slate-600',
@@ -18,6 +19,7 @@ export function MeetingDetailClient({ meeting }: { meeting: CouncilMeeting }) {
   const [publishing, setPublishing] = useState(false)
   const [published, setPublished] = useState(!!meeting.minutes?.published_at)
   const [expandDiscussion, setExpandDiscussion] = useState(false)
+  const [completing, setCompleting] = useState(false)
   const [actionStatuses, setActionStatuses] = useState<Record<string, ActionStatus>>(
     () => Object.fromEntries(
       (meeting.actions ?? []).map(a => [a.id, a.status])
@@ -71,31 +73,55 @@ export function MeetingDetailClient({ meeting }: { meeting: CouncilMeeting }) {
               {meeting.location && ` · ${meeting.location}`}
             </p>
           </div>
-          {meeting.minutes && !published && (
-            <button
-              onClick={handlePublish}
-              disabled={publishing}
-              className="shrink-0 bg-green-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {publishing && <Loader2 className="h-4 w-4 animate-spin" />}
-              📋 회의록 공개
-            </button>
-          )}
-          {published && (
-            <span className="shrink-0 flex items-center gap-1.5 text-green-600 text-sm font-medium">
-              <CheckCircle2 className="h-4 w-4" /> 공개 완료
-            </span>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {meeting.status === 'scheduled' && !meeting.minutes && !completing && (
+              <button
+                onClick={() => setCompleting(true)}
+                className="flex items-center gap-1.5 bg-[#8BADD9] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-600 transition-colors"
+              >
+                <PlayCircle className="h-4 w-4" />
+                회의 완료 처리
+              </button>
+            )}
+            {meeting.minutes && !published && (
+              <button
+                onClick={handlePublish}
+                disabled={publishing}
+                className="bg-green-500 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {publishing && <Loader2 className="h-4 w-4 animate-spin" />}
+                📋 회의록 공개
+              </button>
+            )}
+            {published && (
+              <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
+                <CheckCircle2 className="h-4 w-4" /> 공개 완료
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 회의록 없음 */}
+      {/* 회의록 없음 / 완료 처리 흐름 */}
       {!meeting.minutes && (
-        <div className="bg-yellow-50 rounded-2xl border border-yellow-100 p-6 text-center">
-          <FileText className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
-          <p className="text-sm text-slate-600 font-medium">아직 회의록이 생성되지 않았습니다.</p>
-          <p className="text-xs text-slate-400 mt-1">전사 텍스트가 있다면 회의 편집에서 AI 생성을 진행하세요.</p>
-        </div>
+        completing ? (
+          <CompleteMeetingFlow
+            meeting={meeting}
+            onCancel={() => setCompleting(false)}
+          />
+        ) : (
+          <div className="bg-yellow-50 rounded-2xl border border-yellow-100 p-6 text-center">
+            <FileText className="h-8 w-8 text-yellow-400 mx-auto mb-2" />
+            <p className="text-sm text-slate-600 font-medium">아직 회의록이 생성되지 않았습니다.</p>
+            {meeting.status === 'scheduled' ? (
+              <p className="text-xs text-slate-400 mt-1">
+                위의 <span className="font-medium text-[#8BADD9]">회의 완료 처리</span> 버튼을 눌러 전사 텍스트를 입력하고 회의록을 생성하세요.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-400 mt-1">전사 텍스트가 있다면 회의 완료 처리에서 AI 생성을 진행하세요.</p>
+            )}
+          </div>
+        )
       )}
 
       {/* 1단 안건 */}
