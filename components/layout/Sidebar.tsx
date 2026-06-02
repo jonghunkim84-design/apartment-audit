@@ -254,7 +254,7 @@ export function Sidebar({ role }: { role?: string }) {
           )}
         >
           <HelpCircle className="h-4 w-4 shrink-0" />
-          사용 안내
+          대표회의 사용안내
         </Link>
       </div>
     </aside>
