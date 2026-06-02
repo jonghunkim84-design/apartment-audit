@@ -78,7 +78,7 @@ export async function getMeetings(filters?: {
   const { supabase, db, complexId } = await getComplexId()
   let q = db
     .from('council_meetings')
-    .select('*, council_meeting_minutes(*)')
+    .select('*, minutes:council_meeting_minutes(*)')
     .eq('apartment_complex_id', complexId)
     .order('held_at', { ascending: false })
 
@@ -100,8 +100,9 @@ export async function getMeeting(id: string): Promise<CouncilMeeting | null> {
     .from('council_meetings')
     .select(`
       *,
-      council_meeting_minutes(*),
-      council_decisions(*, council_actions(*))
+      minutes:council_meeting_minutes(*),
+      decisions:council_decisions(*),
+      actions:council_actions(*)
     `)
     .eq('id', id)
     .eq('apartment_complex_id', complexId)
