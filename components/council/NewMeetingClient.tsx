@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Bot, ChevronRight, AlertCircle } from 'lucide-react'
 import { createMeeting, saveMinutes } from '@/lib/actions/council'
@@ -22,10 +22,12 @@ export function NewMeetingClient({ activeTerm }: Props) {
   // Step 1 fields
   const [title, setTitle] = useState('')
   const [meetingType, setMeetingType] = useState<MeetingType>('regular')
-  const [heldAt, setHeldAt] = useState(() => {
+  const [heldAt, setHeldAt] = useState('')
+
+  useEffect(() => {
     const d = new Date(); d.setMinutes(0, 0, 0)
-    return d.toISOString().slice(0, 16)
-  })
+    setHeldAt(d.toISOString().slice(0, 16))
+  }, [])
   const [location, setLocation] = useState('')
   const [quorumRequired, setQuorumRequired] = useState('')
   const [quorumPresent, setQuorumPresent] = useState('')
