@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS council_handovers (
 );
 
 ALTER TABLE council_handovers ENABLE ROW LEVEL SECURITY;
-
+DROP POLICY IF EXISTS "council_handovers_policy" ON council_handovers;
 CREATE POLICY "council_handovers_policy" ON council_handovers
   USING (apartment_complex_id = auth_apartment_complex_id());
 

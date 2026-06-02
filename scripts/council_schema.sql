@@ -119,6 +119,12 @@ ALTER TABLE council_decisions       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE council_actions         ENABLE ROW LEVEL SECURITY;
 
 -- 같은 단지 구성원만 접근
+DROP POLICY IF EXISTS "council_terms_policy"   ON council_terms;
+DROP POLICY IF EXISTS "council_meetings_policy" ON council_meetings;
+DROP POLICY IF EXISTS "council_minutes_policy"  ON council_meeting_minutes;
+DROP POLICY IF EXISTS "council_decisions_policy" ON council_decisions;
+DROP POLICY IF EXISTS "council_actions_policy"  ON council_actions;
+
 CREATE POLICY "council_terms_policy" ON council_terms
   USING (apartment_complex_id = auth_apartment_complex_id());
 

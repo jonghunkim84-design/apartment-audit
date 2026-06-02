@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS council_quarterly_reports (
 );
 
 ALTER TABLE council_quarterly_reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "council_qr_policy" ON council_quarterly_reports;
 CREATE POLICY "council_qr_policy" ON council_quarterly_reports
   USING (apartment_complex_id = auth_apartment_complex_id());
 
