@@ -195,16 +195,16 @@ export function Sidebar({ role }: { role?: string }) {
               <button
                 onClick={() => toggle(group.id)}
                 className={cn(
-                  'w-full flex items-center justify-between px-3 py-1.5 rounded-lg transition-colors text-left',
+                  'w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors text-left',
                   isActive
-                    ? 'text-white font-semibold'
-                    : 'text-blue-200 hover:text-white font-medium'
+                    ? 'text-white font-semibold bg-white/10'
+                    : 'text-white/50 hover:text-white/80 font-medium'
                 )}
               >
-                <span className="text-xs uppercase tracking-wider">{group.label}</span>
+                <span className="text-sm">{group.label}</span>
                 {isOpen
-                  ? <ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
-                  : <ChevronRight className="h-3 w-3 shrink-0 opacity-70" />
+                  ? <ChevronDown className="h-4 w-4 shrink-0" />
+                  : <ChevronRight className="h-4 w-4 shrink-0" />
                 }
               </button>
 
