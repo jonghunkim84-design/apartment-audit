@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Bot, ChevronRight, AlertCircle } from 'lucide-react'
+import { Loader2, Bot, ChevronRight, AlertCircle, CalendarPlus, ClipboardList } from 'lucide-react'
 import { createMeeting, saveMinutes } from '@/lib/actions/council'
 import type { CouncilTerm, MeetingType, AIMinutesResult } from '@/lib/council-types'
 import { MEETING_TYPE_LABEL } from '@/lib/council-types'
@@ -14,31 +14,75 @@ const CONSENT_SCRIPT =
 
 export function NewMeetingClient({ activeTerm }: Props) {
   const router = useRouter()
+  const [mode, setMode] = useState<'schedule' | 'record'>('schedule')
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState('')
 
-  // Step 1 fields
+  // 공통 필드
   const [title, setTitle] = useState('')
   const [meetingType, setMeetingType] = useState<MeetingType>('regular')
   const [heldAt, setHeldAt] = useState('')
-
-  useEffect(() => {
-    const d = new Date(); d.setMinutes(0, 0, 0)
-    setHeldAt(d.toISOString().slice(0, 16))
-  }, [])
   const [location, setLocation] = useState('')
   const [quorumRequired, setQuorumRequired] = useState('')
+
+  // 완료된 회의 전용 필드
   const [quorumPresent, setQuorumPresent] = useState('')
   const [consentConfirmed, setConsentConfirmed] = useState(false)
 
-  // Step 2 fields
+  // Step 2 필드
   const [transcript, setTranscript] = useState('')
   const [meetingId, setMeetingId] = useState('')
   const [aiResult, setAiResult] = useState<AIMinutesResult | null>(null)
 
-  // Step 1 → 회의 등록
+  useEffect(() => {
+    // 회의 예약 모드: 기본값을 내일 10시로
+    // 완료 모드: 현재 시각으로
+    const d = new Date()
+    if (mode === 'schedule') {
+      d.setDate(d.getDate() + 7)
+    }
+    d.setHours(10, 0, 0, 0)
+    setHeldAt(d.toISOString().slice(0, 16))
+  }, [mode])
+
+  // 모드 전환 시 에러·상태 초기화
+  function switchMode(m: 'schedule' | 'record') {
+    setMode(m)
+    setStep(1)
+    setError('')
+    setConsentConfirmed(false)
+    setTranscript('')
+    setAiResult(null)
+  }
+
+  // 회의 예약 등록 (미래 예정 회의)
+  async function handleSchedule() {
+    if (!title.trim() || !heldAt) {
+      setError('회의 제목과 일시는 필수입니다.')
+      return
+    }
+    setSaving(true); setError('')
+    try {
+      const meeting = await createMeeting({
+        title,
+        meeting_type: meetingType,
+        held_at: new Date(heldAt).toISOString(),
+        location: location || undefined,
+        quorum_required: quorumRequired ? parseInt(quorumRequired) : undefined,
+        recording_consent_confirmed: false,
+        term_id: activeTerm?.id,
+      })
+      router.push(`/council/meetings/${meeting.id}`)
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Step 1 → 완료된 회의 등록
   async function handleStep1() {
     if (!title.trim() || !heldAt || !consentConfirmed) {
       setError('제목, 일시, 녹음 동의 확인은 필수입니다.')
@@ -105,22 +149,46 @@ export function NewMeetingClient({ activeTerm }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-slate-900">새 회의 등록</h1>
+      <h1 className="text-2xl font-bold text-slate-900">회의 등록</h1>
 
-      {/* 스텝 인디케이터 */}
-      <div className="flex items-center gap-2 text-sm">
-        {[['1', '기본 정보'], ['2', '전사 입력'], ['3', '회의록 검토']].map(([n, label], i) => (
-          <div key={n} className="flex items-center gap-2">
-            {i > 0 && <ChevronRight className="h-4 w-4 text-slate-300" />}
-            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-              step === (i + 1) ? 'bg-[#8BADD9] text-white' :
-              step > (i + 1) ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'
-            }`}>
-              {n}. {label}
-            </div>
-          </div>
-        ))}
+      {/* 모드 선택 */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-1.5 flex gap-1">
+        <button
+          onClick={() => switchMode('schedule')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            mode === 'schedule' ? 'bg-[#8BADD9] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          <CalendarPlus className="h-4 w-4" />
+          회의 예약
+        </button>
+        <button
+          onClick={() => switchMode('record')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+            mode === 'record' ? 'bg-[#8BADD9] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          <ClipboardList className="h-4 w-4" />
+          완료된 회의 등록
+        </button>
       </div>
+
+      {/* 스텝 인디케이터 (완료된 회의 등록 모드만) */}
+      {mode === 'record' && (
+        <div className="flex items-center gap-2 text-sm">
+          {[['1', '기본 정보'], ['2', '전사 입력'], ['3', '회의록 검토']].map(([n, label], i) => (
+            <div key={n} className="flex items-center gap-2">
+              {i > 0 && <ChevronRight className="h-4 w-4 text-slate-300" />}
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                step === (i + 1) ? 'bg-[#8BADD9] text-white' :
+                step > (i + 1) ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'
+              }`}>
+                {n}. {label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl border border-red-100">
@@ -129,8 +197,81 @@ export function NewMeetingClient({ activeTerm }: Props) {
         </div>
       )}
 
-      {/* Step 1 */}
-      {step === 1 && (
+      {/* ── 회의 예약 모드 ── */}
+      {mode === 'schedule' && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
+          <p className="text-xs text-slate-400 bg-blue-50 rounded-xl px-4 py-3">
+            예정된 회의 일시와 정보를 미리 등록합니다. 회의 후 상세 화면에서 전사 텍스트를 추가해 회의록을 생성할 수 있습니다.
+          </p>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">회의 제목 *</label>
+            <input
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="예: 2026년 7월 정기 입주자대표회의"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8BADD9]"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">회의 유형</label>
+              <select
+                value={meetingType}
+                onChange={e => setMeetingType(e.target.value as MeetingType)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8BADD9]"
+              >
+                {(Object.entries(MEETING_TYPE_LABEL) as [MeetingType, string][]).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">예정 일시 *</label>
+              <input
+                type="datetime-local"
+                value={heldAt}
+                onChange={e => setHeldAt(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8BADD9]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">장소</label>
+            <input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="예: 관리사무소 회의실"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8BADD9]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">의결 정족수</label>
+            <input
+              type="number"
+              value={quorumRequired}
+              onChange={e => setQuorumRequired(e.target.value)}
+              placeholder="필요 인원 (선택)"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#8BADD9]"
+            />
+          </div>
+
+          <button
+            onClick={handleSchedule}
+            disabled={saving}
+            className="w-full bg-[#8BADD9] text-white py-2.5 rounded-xl font-medium text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />}
+            {saving ? '등록 중...' : '회의 예약 등록'}
+          </button>
+        </div>
+      )}
+
+      {/* ── 완료된 회의 등록 모드 — Step 1 ── */}
+      {mode === 'record' && step === 1 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">회의 제목 *</label>
@@ -227,8 +368,8 @@ export function NewMeetingClient({ activeTerm }: Props) {
         </div>
       )}
 
-      {/* Step 2 */}
-      {step === 2 && (
+      {/* ── 완료된 회의 등록 모드 — Step 2 ── */}
+      {mode === 'record' && step === 2 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 space-y-5">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -268,8 +409,8 @@ export function NewMeetingClient({ activeTerm }: Props) {
         </div>
       )}
 
-      {/* Step 3 — AI 결과 미리보기 */}
-      {step === 3 && aiResult && (
+      {/* ── 완료된 회의 등록 모드 — Step 3 ── */}
+      {mode === 'record' && step === 3 && aiResult && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-center gap-2 mb-4">
