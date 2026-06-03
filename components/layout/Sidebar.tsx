@@ -155,7 +155,7 @@ export function Sidebar({ role }: { role?: string }) {
 
       {/* 로고 */}
       <div
-        className="flex items-center gap-3 px-4 py-4 border-b"
+        className="flex items-center gap-3 px-4 h-16 shrink-0 border-b"
         style={{ borderColor: '#7A9FD0', background: 'rgba(0,0,0,0.18)' }}
       >
         <div className="shrink-0 w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
