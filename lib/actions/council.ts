@@ -1,6 +1,7 @@
 ﻿'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import type {
   CouncilTerm,
@@ -357,13 +358,14 @@ export async function updateActionStatus(id: string, status: ActionStatus, note?
 }
 
 export async function escalateAction(id: string, toUserId?: string, reason?: string): Promise<void> {
-  const { supabase, db } = await getComplexId()
+  const { db, user, complexId } = await getComplexId()
   const { error } = await db
     .from('council_actions')
     .update({
       escalated: true,
       escalated_at: new Date().toISOString(),
       escalated_to: toUserId ?? null,
+      escalated_by: user.id,
       escalation_reason: reason ?? null,
       updated_at: new Date().toISOString(),
     })
@@ -375,23 +377,18 @@ export async function escalateAction(id: string, toUserId?: string, reason?: str
     return
   }
 
-  // 인앱 알림 생성
+  // 인앱 알림 — admin 클라이언트로 RLS 우회
   const { data: action } = await db
     .from('council_actions')
     .select('title')
     .eq('id', id)
     .single()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('apartment_complex_id')
-    .eq('id', toUserId)
-    .single()
-
-  if (action && profile?.apartment_complex_id) {
-    await supabase.from('notifications').insert({
+  if (action) {
+    const admin = createAdminClient()
+    await admin.from('notifications').insert({
       user_id: toUserId,
-      apartment_complex_id: profile.apartment_complex_id as string,
+      apartment_complex_id: complexId,
       title: '액션 에스컬레이션',
       message: `[대표회의] "${action.title}" 액션이 에스컬레이션되었습니다.`,
       severity: 'WARNING',

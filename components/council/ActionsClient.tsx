@@ -45,6 +45,7 @@ export function ActionsClient({
       escalated: true,
       escalated_at: now,
       escalated_to: toUserId ?? null,
+      escalated_by: currentUserId,
       escalation_reason: reason ?? null,
     })
     await escalateAction(id, toUserId, reason)
@@ -317,7 +318,7 @@ function ActionDetailModal({
   const escalatedMember = members.find(m => m.id === a.escalated_to)
 
   // 역할 판별
-  const isEscalator  = a.escalated && a.assignee_id === currentUserId
+  const isEscalator  = a.escalated && a.escalated_by === currentUserId
   const isRecipient  = a.escalated && a.escalated_to === currentUserId
 
   async function handleEscalateConfirm() {
