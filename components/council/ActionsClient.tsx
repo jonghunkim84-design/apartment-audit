@@ -102,71 +102,110 @@ export function ActionsClient({
         )}
       </div>
 
-      {/* 칸반 (모바일에서는 목록) */}
-      <div className="hidden md:grid grid-cols-4 gap-4">
-        {COLUMNS.map(col => {
-          const colActions = actions.filter(a => a.status === col.status)
-          return (
-            <div key={col.status} className={`bg-white rounded-2xl shadow-sm border-t-4 ${col.color} border border-slate-100 p-4`}>
-              <div className="flex items-center gap-2 mb-3">
-                {col.icon}
-                <span className="text-sm font-semibold text-slate-700">{col.label}</span>
-                <span className="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{colActions.length}</span>
-              </div>
-              <div className="space-y-2">
-                {colActions.map(a => (
-                  <ActionCard
-                    key={a.id}
-                    action={a}
-                    today={today}
-                    onStatusChange={handleStatusChange}
-                    onClick={() => setSelectedAction(a)}
-                  />
-                ))}
-                {colActions.length === 0 && (
-                  <p className="text-xs text-slate-400 text-center py-4">없음</p>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* 모바일 목록 */}
-      <div className="md:hidden space-y-3">
-        {filtered.map(a => (
-          <div
-            key={a.id}
-            className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 cursor-pointer active:bg-slate-50"
-            onClick={() => setSelectedAction(a)}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-medium text-slate-800">{a.title}</p>
-                  {a.escalated && <ArrowUpCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
+      {/* 데스크톱 칸반 — 전체 보기일 때만 */}
+      {filterStatus === 'all' && (
+        <div className="hidden md:grid grid-cols-4 gap-4">
+          {COLUMNS.map(col => {
+            const colActions = actions.filter(a => a.status === col.status)
+            return (
+              <div key={col.status} className={`bg-white rounded-2xl shadow-sm border-t-4 ${col.color} border border-slate-100 p-4`}>
+                <div className="flex items-center gap-2 mb-3">
+                  {col.icon}
+                  <span className="text-sm font-semibold text-slate-700">{col.label}</span>
+                  <span className="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{colActions.length}</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  {a.assignee_name ?? '담당자 미지정'} · {a.due_date}
-                </p>
+                <div className="space-y-2">
+                  {colActions.map(a => (
+                    <ActionCard
+                      key={a.id}
+                      action={a}
+                      today={today}
+                      onStatusChange={handleStatusChange}
+                      onClick={() => setSelectedAction(a)}
+                    />
+                  ))}
+                  {colActions.length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-4">없음</p>
+                  )}
+                </div>
               </div>
-              <select
-                value={a.status}
-                onClick={e => e.stopPropagation()}
-                onChange={e => { e.stopPropagation(); handleStatusChange(a.id, e.target.value as ActionStatus) }}
-                className="shrink-0 text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none"
-              >
-                {Object.entries(ACTION_STATUS_LABEL).map(([v, l]) => (
-                  <option key={v} value={v}>{l}</option>
-                ))}
-              </select>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 필터 적용 시 목록 뷰 (데스크톱 + 모바일 공통) */}
+      {filterStatus !== 'all' && (
+        <div className="space-y-3">
+          {filtered.map(a => (
+            <div
+              key={a.id}
+              className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 cursor-pointer hover:shadow-md active:bg-slate-50 transition-shadow"
+              onClick={() => setSelectedAction(a)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <p className="text-sm font-medium text-slate-800">{a.title}</p>
+                    {a.escalated && <ArrowUpCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    {a.assignee_name ?? '담당자 미지정'} · {a.due_date} · {ACTION_STATUS_LABEL[a.status]}
+                  </p>
+                </div>
+                <select
+                  value={a.status}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => { e.stopPropagation(); handleStatusChange(a.id, e.target.value as ActionStatus) }}
+                  className="shrink-0 text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none"
+                >
+                  {Object.entries(ACTION_STATUS_LABEL).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-slate-400 text-sm">해당 액션이 없습니다.</div>
-        )}
-      </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-center py-12 text-slate-400 text-sm">해당 액션이 없습니다.</div>
+          )}
+        </div>
+      )}
+
+      {/* 모바일 전체 목록 (칸반 미표시 구간) */}
+      {filterStatus === 'all' && (
+        <div className="md:hidden space-y-3">
+          {actions.map(a => (
+            <div
+              key={a.id}
+              className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 cursor-pointer active:bg-slate-50"
+              onClick={() => setSelectedAction(a)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-slate-800">{a.title}</p>
+                    {a.escalated && <ArrowUpCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-1">
+                    {a.assignee_name ?? '담당자 미지정'} · {a.due_date}
+                  </p>
+                </div>
+                <select
+                  value={a.status}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => { e.stopPropagation(); handleStatusChange(a.id, e.target.value as ActionStatus) }}
+                  className="shrink-0 text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none"
+                >
+                  {Object.entries(ACTION_STATUS_LABEL).map(([v, l]) => (
+                    <option key={v} value={v}>{l}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {selectedAction && (
         <ActionDetailModal
