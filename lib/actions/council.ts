@@ -356,7 +356,7 @@ export async function updateActionStatus(id: string, status: ActionStatus, note?
   revalidatePath('/council/actions')
 }
 
-export async function escalateAction(id: string, toUserId?: string): Promise<void> {
+export async function escalateAction(id: string, toUserId?: string, reason?: string): Promise<void> {
   const { supabase, db } = await getComplexId()
   const { error } = await db
     .from('council_actions')
@@ -364,6 +364,7 @@ export async function escalateAction(id: string, toUserId?: string): Promise<voi
       escalated: true,
       escalated_at: new Date().toISOString(),
       escalated_to: toUserId ?? null,
+      escalation_reason: reason ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -396,6 +397,20 @@ export async function escalateAction(id: string, toUserId?: string): Promise<voi
       severity: 'WARNING',
     })
   }
+  revalidatePath('/council/actions')
+}
+
+export async function respondToEscalation(id: string, response: string): Promise<void> {
+  const { db } = await getComplexId()
+  const { error } = await db
+    .from('council_actions')
+    .update({
+      escalation_response: response,
+      escalation_responded_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
   revalidatePath('/council/actions')
 }
 

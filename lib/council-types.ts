@@ -134,6 +134,9 @@ export interface CouncilAction {
   escalated: boolean
   escalated_at: string | null
   escalated_to: string | null
+  escalation_reason: string | null
+  escalation_response: string | null
+  escalation_responded_at: string | null
   completed_at: string | null
   completed_by: string | null
   completion_note: string | null

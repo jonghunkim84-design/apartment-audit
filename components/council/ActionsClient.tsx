@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { updateActionStatus, escalateAction } from '@/lib/actions/council'
+import { updateActionStatus, escalateAction, respondToEscalation } from '@/lib/actions/council'
 import type { ComplexMember } from '@/lib/actions/council'
-import { CheckCircle2, AlertTriangle, Clock, CircleDot, X, Info, ArrowUpCircle } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Clock, CircleDot, X, Info, ArrowUpCircle, MessageSquare } from 'lucide-react'
 import type { CouncilAction, ActionStatus } from '@/lib/council-types'
 import { ACTION_STATUS_LABEL } from '@/lib/council-types'
 
@@ -17,9 +17,11 @@ const COLUMNS: { status: ActionStatus; label: string; color: string; icon: React
 export function ActionsClient({
   initialActions,
   members,
+  currentUserId,
 }: {
   initialActions: CouncilAction[]
   members: ComplexMember[]
+  currentUserId: string
 }) {
   const [actions, setActions] = useState<CouncilAction[]>(initialActions)
   const [filterStatus, setFilterStatus] = useState<ActionStatus | 'all' | 'escalated'>('all')
@@ -37,10 +39,21 @@ export function ActionsClient({
     await updateActionStatus(id, newStatus)
   }
 
-  async function handleEscalate(id: string, toUserId?: string) {
+  async function handleEscalate(id: string, toUserId?: string, reason?: string) {
     const now = new Date().toISOString()
-    patchAction(id, { escalated: true, escalated_at: now, escalated_to: toUserId ?? null })
-    await escalateAction(id, toUserId)
+    patchAction(id, {
+      escalated: true,
+      escalated_at: now,
+      escalated_to: toUserId ?? null,
+      escalation_reason: reason ?? null,
+    })
+    await escalateAction(id, toUserId, reason)
+  }
+
+  async function handleRespond(id: string, response: string) {
+    const now = new Date().toISOString()
+    patchAction(id, { escalation_response: response, escalation_responded_at: now })
+    await respondToEscalation(id, response)
   }
 
   async function handleResolveEscalation(id: string, note: string) {
@@ -86,7 +99,6 @@ export function ActionsClient({
             {l} ({v === 'all' ? actions.length : actions.filter(a => a.status === v).length})
           </button>
         ))}
-        {/* 에스컬레이션 필터 — 1건 이상일 때만 표시 */}
         {escalatedCount > 0 && (
           <button
             onClick={() => setFilterStatus('escalated')}
@@ -134,37 +146,17 @@ export function ActionsClient({
         </div>
       )}
 
-      {/* 필터 적용 시 목록 뷰 (데스크톱 + 모바일 공통) */}
+      {/* 필터 적용 시 목록 뷰 */}
       {filterStatus !== 'all' && (
         <div className="space-y-3">
           {filtered.map(a => (
-            <div
+            <FilteredCard
               key={a.id}
-              className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 cursor-pointer hover:shadow-md active:bg-slate-50 transition-shadow"
+              action={a}
+              currentUserId={currentUserId}
               onClick={() => setSelectedAction(a)}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <p className="text-sm font-medium text-slate-800">{a.title}</p>
-                    {a.escalated && <ArrowUpCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    {a.assignee_name ?? '담당자 미지정'} · {a.due_date} · {ACTION_STATUS_LABEL[a.status]}
-                  </p>
-                </div>
-                <select
-                  value={a.status}
-                  onClick={e => e.stopPropagation()}
-                  onChange={e => { e.stopPropagation(); handleStatusChange(a.id, e.target.value as ActionStatus) }}
-                  className="shrink-0 text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none"
-                >
-                  {Object.entries(ACTION_STATUS_LABEL).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              onStatusChange={handleStatusChange}
+            />
           ))}
           {filtered.length === 0 && (
             <div className="text-center py-12 text-slate-400 text-sm">해당 액션이 없습니다.</div>
@@ -172,37 +164,17 @@ export function ActionsClient({
         </div>
       )}
 
-      {/* 모바일 전체 목록 (칸반 미표시 구간) */}
+      {/* 모바일 전체 목록 */}
       {filterStatus === 'all' && (
         <div className="md:hidden space-y-3">
           {actions.map(a => (
-            <div
+            <FilteredCard
               key={a.id}
-              className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 cursor-pointer active:bg-slate-50"
+              action={a}
+              currentUserId={currentUserId}
               onClick={() => setSelectedAction(a)}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium text-slate-800">{a.title}</p>
-                    {a.escalated && <ArrowUpCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
-                  </div>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {a.assignee_name ?? '담당자 미지정'} · {a.due_date}
-                  </p>
-                </div>
-                <select
-                  value={a.status}
-                  onClick={e => e.stopPropagation()}
-                  onChange={e => { e.stopPropagation(); handleStatusChange(a.id, e.target.value as ActionStatus) }}
-                  className="shrink-0 text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none"
-                >
-                  {Object.entries(ACTION_STATUS_LABEL).map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              onStatusChange={handleStatusChange}
+            />
           ))}
         </div>
       )}
@@ -211,9 +183,11 @@ export function ActionsClient({
         <ActionDetailModal
           action={selectedAction}
           members={members}
+          currentUserId={currentUserId}
           onClose={() => setSelectedAction(null)}
           onStatusChange={handleStatusChange}
           onEscalate={handleEscalate}
+          onRespond={handleRespond}
           onResolveEscalation={handleResolveEscalation}
         />
       )}
@@ -221,7 +195,7 @@ export function ActionsClient({
   )
 }
 
-// ── ActionCard ────────────────────────────────────────────────
+// ── ActionCard (칸반용) ───────────────────────────────────────
 
 function ActionCard({ action: a, today, onStatusChange, onClick }: {
   action: CouncilAction
@@ -233,10 +207,13 @@ function ActionCard({ action: a, today, onStatusChange, onClick }: {
   return (
     <div
       onClick={onClick}
-      className={`rounded-xl p-3 text-xs border cursor-pointer hover:shadow-md transition-shadow ${a.status === 'overdue' ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}
+      className={`rounded-xl p-3 text-xs border cursor-pointer hover:shadow-md transition-shadow ${
+        a.status === 'overdue' ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'
+      }`}
     >
       <div className="flex items-start gap-1 mb-1">
         {a.escalated && <ArrowUpCircle className="h-3 w-3 text-orange-500 mt-0.5 shrink-0" />}
+        {a.escalated && a.escalation_response && <MessageSquare className="h-3 w-3 text-green-500 mt-0.5 shrink-0" />}
         <p className="font-medium text-slate-800 leading-snug">{a.title}</p>
       </div>
       <p className="text-slate-500">{a.assignee_name ?? '미지정'}</p>
@@ -259,39 +236,106 @@ function ActionCard({ action: a, today, onStatusChange, onClick }: {
   )
 }
 
+// ── FilteredCard (목록용) ────────────────────────────────────
+
+function FilteredCard({ action: a, currentUserId, onClick, onStatusChange }: {
+  action: CouncilAction
+  currentUserId: string
+  onClick: () => void
+  onStatusChange: (id: string, s: ActionStatus) => void
+}) {
+  const isRecipient = a.escalated && a.escalated_to === currentUserId && !a.escalation_response
+  return (
+    <div
+      className={`bg-white rounded-2xl shadow-sm border p-4 cursor-pointer hover:shadow-md transition-shadow ${
+        isRecipient ? 'border-orange-200' : 'border-slate-100'
+      }`}
+      onClick={onClick}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <p className="text-sm font-medium text-slate-800">{a.title}</p>
+            {a.escalated && <ArrowUpCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />}
+            {a.escalation_response && <MessageSquare className="h-3.5 w-3.5 text-green-500 shrink-0" />}
+          </div>
+          <p className="text-xs text-slate-400">
+            {a.assignee_name ?? '담당자 미지정'} · {a.due_date} · {ACTION_STATUS_LABEL[a.status]}
+          </p>
+          {isRecipient && (
+            <p className="text-xs text-orange-600 font-medium mt-1">조치 내용 입력 필요</p>
+          )}
+        </div>
+        <select
+          value={a.status}
+          onClick={e => e.stopPropagation()}
+          onChange={e => { e.stopPropagation(); onStatusChange(a.id, e.target.value as ActionStatus) }}
+          className="shrink-0 text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none"
+        >
+          {Object.entries(ACTION_STATUS_LABEL).map(([v, l]) => (
+            <option key={v} value={v}>{l}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+}
+
 // ── ActionDetailModal ─────────────────────────────────────────
 
 function ActionDetailModal({
   action: a,
   members,
+  currentUserId,
   onClose,
   onStatusChange,
   onEscalate,
+  onRespond,
   onResolveEscalation,
 }: {
   action: CouncilAction
   members: ComplexMember[]
+  currentUserId: string
   onClose: () => void
   onStatusChange: (id: string, s: ActionStatus) => void
-  onEscalate: (id: string, toUserId?: string) => Promise<void>
+  onEscalate: (id: string, toUserId?: string, reason?: string) => Promise<void>
+  onRespond: (id: string, response: string) => Promise<void>
   onResolveEscalation: (id: string, note: string) => Promise<void>
 }) {
   const [showEscalateForm, setShowEscalateForm] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState('')
+  const [escalationReason, setEscalationReason] = useState('')
   const [escalating, setEscalating] = useState(false)
+
+  const [responseText, setResponseText] = useState(a.escalation_response ?? '')
+  const [responding, setResponding] = useState(false)
+
   const [resolutionNote, setResolutionNote] = useState('')
   const [resolving, setResolving] = useState(false)
 
   const daysLeft = Math.ceil((new Date(a.due_date).getTime() - Date.now()) / 86400000)
   const escalatedMember = members.find(m => m.id === a.escalated_to)
 
+  // 역할 판별
+  const isEscalator  = a.escalated && a.assignee_id === currentUserId
+  const isRecipient  = a.escalated && a.escalated_to === currentUserId
+
   async function handleEscalateConfirm() {
     setEscalating(true)
     try {
-      await onEscalate(a.id, selectedMemberId || undefined)
+      await onEscalate(a.id, selectedMemberId || undefined, escalationReason || undefined)
       setShowEscalateForm(false)
     } finally {
       setEscalating(false)
+    }
+  }
+
+  async function handleRespondSave() {
+    setResponding(true)
+    try {
+      await onRespond(a.id, responseText)
+    } finally {
+      setResponding(false)
     }
   }
 
@@ -310,7 +354,7 @@ function ActionDetailModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4"
+        className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4"
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -318,18 +362,20 @@ function ActionDetailModal({
           <div className="flex items-center gap-2">
             <Info className="h-5 w-5 text-[#8BADD9]" />
             <h2 className="font-semibold text-slate-800">액션 상세</h2>
+            {a.escalated && (
+              <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-medium">
+                에스컬레이션
+              </span>
+            )}
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="h-5 w-5" />
           </button>
         </div>
 
+        {/* 기본 정보 */}
         <div className="space-y-3">
-          {/* 제목 */}
-          <div className="flex items-center gap-2">
-            <p className="text-base font-semibold text-slate-900 leading-snug">{a.title}</p>
-            {a.escalated && <ArrowUpCircle className="h-4 w-4 text-orange-500 shrink-0" />}
-          </div>
+          <p className="text-base font-semibold text-slate-900 leading-snug">{a.title}</p>
 
           {a.description && (
             <div className="bg-slate-50 rounded-xl p-3">
@@ -360,40 +406,127 @@ function ActionDetailModal({
               <p className="text-sm text-slate-700">{a.verification_method}</p>
             </div>
           )}
+        </div>
 
-          {/* 에스컬레이션 정보 */}
-          {a.escalated && (
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 space-y-1">
-              <p className="text-xs font-medium text-orange-600">에스컬레이션됨</p>
+        <div className="border-t border-slate-100 pt-4 space-y-4">
+
+          {/* ── 에스컬레이션 발신자 뷰 ── */}
+          {isEscalator && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">에스컬레이션 현황</p>
+
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-orange-700">에스컬레이션 대상</p>
+                  <p className="text-xs text-slate-400">{a.escalated_at?.split('T')[0]}</p>
+                </div>
+                <p className="text-sm text-slate-800 font-medium">
+                  {escalatedMember ? (escalatedMember.full_name || escalatedMember.email) : '미지정'}
+                </p>
+                {a.escalation_reason && (
+                  <div className="mt-2 pt-2 border-t border-orange-100">
+                    <p className="text-xs font-medium text-orange-700 mb-1">에스컬레이션 사유</p>
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.escalation_reason}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 조치 내용 확인 */}
+              {a.escalation_response ? (
+                <div className="bg-green-50 border border-green-100 rounded-xl p-3 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <MessageSquare className="h-3.5 w-3.5 text-green-600" />
+                    <p className="text-xs font-medium text-green-700">조치 내용 (수신자 답변)</p>
+                  </div>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.escalation_response}</p>
+                  {a.escalation_responded_at && (
+                    <p className="text-xs text-slate-400">{a.escalation_responded_at.split('T')[0]}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-2">아직 조치 내용이 없습니다.</p>
+              )}
+
+              {/* 처리 완료 종결 */}
+              {a.status !== 'completed' && a.escalation_response && (
+                <div className="border border-slate-200 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-medium text-slate-600">조치 확인 후 종결</p>
+                  <textarea
+                    value={resolutionNote}
+                    onChange={e => setResolutionNote(e.target.value)}
+                    placeholder="종결 메모 (선택)"
+                    rows={2}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-slate-300 resize-none"
+                  />
+                  <button
+                    onClick={handleResolveClick}
+                    disabled={resolving}
+                    className="w-full py-2 bg-slate-700 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    {resolving ? '처리 중…' : '처리 완료로 종결'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── 에스컬레이션 수신자 뷰 ── */}
+          {isRecipient && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide">에스컬레이션 수신</p>
+
+              {a.escalation_reason && (
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-3">
+                  <p className="text-xs font-medium text-orange-700 mb-1">에스컬레이션 사유</p>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.escalation_reason}</p>
+                  <p className="text-xs text-slate-400 mt-1.5">— {a.assignee_name ?? '담당자'} · {a.escalated_at?.split('T')[0]}</p>
+                </div>
+              )}
+
+              {a.escalation_response ? (
+                <div className="bg-green-50 border border-green-100 rounded-xl p-3">
+                  <p className="text-xs font-medium text-green-700 mb-1">저장된 조치 내용</p>
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.escalation_response}</p>
+                  <p className="text-xs text-slate-400 mt-1">{a.escalation_responded_at?.split('T')[0]}</p>
+                </div>
+              ) : (
+                <div className="border border-orange-200 rounded-xl p-3 space-y-2">
+                  <p className="text-xs font-medium text-orange-700">조치 내용 입력</p>
+                  <textarea
+                    value={responseText}
+                    onChange={e => setResponseText(e.target.value)}
+                    placeholder="어떤 조치를 취할 예정인지 입력하세요"
+                    rows={3}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none"
+                  />
+                  <button
+                    onClick={handleRespondSave}
+                    disabled={responding || !responseText.trim()}
+                    className="w-full py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    {responding ? '저장 중…' : '조치 내용 저장'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── 제3자 읽기 전용 뷰 (에스컬레이션 O, 발신자도 수신자도 아님) ── */}
+          {a.escalated && !isEscalator && !isRecipient && (
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 space-y-1.5">
+              <p className="text-xs font-medium text-orange-700">에스컬레이션 정보</p>
               {escalatedMember && (
                 <p className="text-sm text-slate-700">
                   대상: {escalatedMember.full_name || escalatedMember.email}
                 </p>
               )}
-              {a.escalated_at && (
-                <p className="text-xs text-slate-400">{a.escalated_at.split('T')[0]}</p>
+              {a.escalation_reason && (
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">사유: {a.escalation_reason}</p>
               )}
-            </div>
-          )}
-
-          {/* Feature 3: 처리 완료 기록 (에스컬레이션 O, 미완료) */}
-          {a.escalated && a.status !== 'completed' && (
-            <div className="border border-orange-200 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-medium text-orange-700">에스컬레이션 처리 완료 기록</p>
-              <textarea
-                value={resolutionNote}
-                onChange={e => setResolutionNote(e.target.value)}
-                placeholder="처리 내용을 입력하세요 (선택)"
-                rows={2}
-                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none"
-              />
-              <button
-                onClick={handleResolveClick}
-                disabled={resolving}
-                className="w-full py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
-              >
-                {resolving ? '처리 중…' : '처리 완료로 종결'}
-              </button>
+              {a.escalation_response && (
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">조치: {a.escalation_response}</p>
+              )}
+              <p className="text-xs text-slate-400">{a.escalated_at?.split('T')[0]}</p>
             </div>
           )}
 
@@ -407,31 +540,38 @@ function ActionDetailModal({
           )}
         </div>
 
-        {/* 하단 액션 영역 */}
+        {/* 하단 액션 */}
         <div className="pt-2 border-t border-slate-100 space-y-3">
-          {/* Feature 1: 에스컬레이션 담당자 선택 폼 */}
+          {/* 에스컬레이션 발신 폼 */}
           {!a.escalated && showEscalateForm && (
             <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-medium text-orange-700">에스컬레이션 담당자 선택</p>
+              <p className="text-xs font-medium text-orange-700">에스컬레이션 정보 입력</p>
               <select
                 value={selectedMemberId}
                 onChange={e => setSelectedMemberId(e.target.value)}
                 className="w-full text-sm border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none"
               >
-                <option value="">담당자 선택 (선택 안 하면 미지정)</option>
+                <option value="">에스컬레이션 대상 선택</option>
                 {members.map(m => (
                   <option key={m.id} value={m.id}>
                     {m.full_name || m.email}
                   </option>
                 ))}
               </select>
+              <textarea
+                value={escalationReason}
+                onChange={e => setEscalationReason(e.target.value)}
+                placeholder="에스컬레이션 사유를 입력하세요"
+                rows={3}
+                className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-orange-300 resize-none"
+              />
               <div className="flex gap-2">
                 <button
                   onClick={handleEscalateConfirm}
-                  disabled={escalating}
+                  disabled={escalating || !selectedMemberId || !escalationReason.trim()}
                   className="flex-1 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
                 >
-                  {escalating ? '처리 중…' : '에스컬레이션 확인'}
+                  {escalating ? '처리 중…' : '에스컬레이션 저장'}
                 </button>
                 <button
                   onClick={() => setShowEscalateForm(false)}
