@@ -33,6 +33,23 @@ async function getComplexId() {
   return { supabase, db, user, complexId: profile.apartment_complex_id }
 }
 
+export type ComplexMember = {
+  id: string
+  full_name: string | null
+  email: string
+  role: string
+}
+
+export async function getComplexMembers(): Promise<ComplexMember[]> {
+  const { supabase, complexId } = await getComplexId()
+  const { data } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, role')
+    .eq('apartment_complex_id', complexId)
+    .order('full_name')
+  return (data ?? []) as ComplexMember[]
+}
+
 // ============================================================
 // 회기 (Terms)
 // ============================================================
