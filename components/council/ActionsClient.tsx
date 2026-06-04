@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { updateActionStatus } from '@/lib/actions/council'
-import { CheckCircle2, AlertTriangle, Clock, XCircle, CircleDot, X, Info } from 'lucide-react'
+import { updateActionStatus, escalateAction } from '@/lib/actions/council'
+import { CheckCircle2, AlertTriangle, Clock, XCircle, CircleDot, X, Info, ArrowUpCircle } from 'lucide-react'
 import type { CouncilAction, ActionStatus } from '@/lib/council-types'
 import { ACTION_STATUS_LABEL } from '@/lib/council-types'
 
@@ -28,6 +28,15 @@ export function ActionsClient({ initialActions }: { initialActions: CouncilActio
       setSelectedAction(prev => prev ? { ...prev, status: newStatus } : null)
     }
     await updateActionStatus(id, newStatus)
+  }
+
+  async function handleEscalate(id: string) {
+    const now = new Date().toISOString()
+    setActions(prev =>
+      prev.map(a => a.id === id ? { ...a, escalated: true, escalated_at: now } : a)
+    )
+    setSelectedAction(prev => prev?.id === id ? { ...prev, escalated: true, escalated_at: now } : prev)
+    await escalateAction(id)
   }
 
   const filtered = filterStatus === 'all'
@@ -126,6 +135,7 @@ export function ActionsClient({ initialActions }: { initialActions: CouncilActio
           action={selectedAction}
           onClose={() => setSelectedAction(null)}
           onStatusChange={handleStatusChange}
+          onEscalate={handleEscalate}
         />
       )}
     </div>
@@ -165,12 +175,23 @@ function ActionCard({ action: a, today, onStatusChange, onClick }: {
   )
 }
 
-function ActionDetailModal({ action: a, onClose, onStatusChange }: {
+function ActionDetailModal({ action: a, onClose, onStatusChange, onEscalate }: {
   action: CouncilAction
   onClose: () => void
   onStatusChange: (id: string, s: ActionStatus) => void
+  onEscalate: (id: string) => Promise<void>
 }) {
+  const [escalating, setEscalating] = useState(false)
   const daysLeft = Math.ceil((new Date(a.due_date).getTime() - Date.now()) / 86400000)
+
+  async function handleEscalateClick() {
+    setEscalating(true)
+    try {
+      await onEscalate(a.id)
+    } finally {
+      setEscalating(false)
+    }
+  }
 
   return (
     <div
@@ -256,12 +277,24 @@ function ActionDetailModal({ action: a, onClose, onStatusChange }: {
               ))}
             </select>
           </div>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200"
-          >
-            닫기
-          </button>
+          <div className="flex items-center gap-2">
+            {!a.escalated && (
+              <button
+                onClick={handleEscalateClick}
+                disabled={escalating}
+                className="flex items-center gap-1.5 px-4 py-2 bg-orange-50 text-orange-600 border border-orange-200 rounded-xl text-sm hover:bg-orange-100 disabled:opacity-50"
+              >
+                <ArrowUpCircle className="h-4 w-4" />
+                {escalating ? '처리 중…' : '에스컬레이션'}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl text-sm hover:bg-slate-200"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
     </div>

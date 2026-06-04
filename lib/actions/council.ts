@@ -339,18 +339,23 @@ export async function updateActionStatus(id: string, status: ActionStatus, note?
   revalidatePath('/council/actions')
 }
 
-export async function escalateAction(id: string, toUserId: string): Promise<void> {
+export async function escalateAction(id: string, toUserId?: string): Promise<void> {
   const { supabase, db } = await getComplexId()
   const { error } = await db
     .from('council_actions')
     .update({
       escalated: true,
       escalated_at: new Date().toISOString(),
-      escalated_to: toUserId,
+      escalated_to: toUserId ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
   if (error) throw new Error(error.message)
+
+  if (!toUserId) {
+    revalidatePath('/council/actions')
+    return
+  }
 
   // 인앱 알림 생성
   const { data: action } = await db
