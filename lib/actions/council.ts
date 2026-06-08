@@ -8,6 +8,7 @@ import type {
   CouncilMeeting,
   CouncilMeetingMinutes,
   CouncilDecision,
+  DeferredDecision,
   CouncilAction,
   MeetingType,
   LegalType,
@@ -409,6 +410,81 @@ export async function respondToEscalation(id: string, response: string): Promise
     .eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/council/actions')
+}
+
+// ============================================================
+// 보류 (Defer)
+// ============================================================
+
+export async function deferDecision(
+  decisionId: string,
+  reason: string,
+  nextMeetingAt?: string
+): Promise<void> {
+  const { db, complexId } = await getComplexId()
+
+  const { data: decision, error: fetchError } = await db
+    .from('council_decisions')
+    .select('id, title, meeting_id')
+    .eq('id', decisionId)
+    .single()
+  if (fetchError || !decision) throw new Error('결정사항을 찾을 수 없습니다')
+
+  const { error } = await db
+    .from('council_decisions')
+    .update({
+      agenda_type: 'deferred',
+      deferred_reason: reason,
+      deferred_next_meeting_at: nextMeetingAt ?? null,
+    })
+    .eq('id', decisionId)
+  if (error) throw new Error(error.message)
+
+  const dueDate = nextMeetingAt ?? (() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 30)
+    return d.toISOString().split('T')[0]
+  })()
+
+  await db.from('council_actions').insert({
+    apartment_complex_id: complexId,
+    meeting_id: decision.meeting_id,
+    decision_id: decisionId,
+    title: `[보류 재논의] ${decision.title}`,
+    description: reason,
+    due_date: dueDate,
+    verification_method: '다음 전체대표회의에서 재논의',
+    status: 'pending',
+  })
+
+  revalidatePath(`/council/meetings/${decision.meeting_id}`)
+  revalidatePath('/council/actions')
+  revalidatePath('/council')
+}
+
+export async function getDeferredDecisions(): Promise<DeferredDecision[]> {
+  const { db, complexId } = await getComplexId()
+  const { data: meetingRows } = await db
+    .from('council_meetings')
+    .select('id')
+    .eq('apartment_complex_id', complexId)
+  if (!meetingRows?.length) return []
+
+  const ids = meetingRows.map((m: { id: string }) => m.id)
+  const { data } = await db
+    .from('council_decisions')
+    .select('*, meeting:council_meetings(title, held_at)')
+    .eq('agenda_type', 'deferred')
+    .in('meeting_id', ids)
+    .order('created_at', { ascending: false })
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map(d => ({
+    ...d,
+    meeting_title: d.meeting?.title ?? null,
+    meeting_held_at: d.meeting?.held_at ?? null,
+    meeting: undefined,
+  })) as DeferredDecision[]
 }
 
 // 매일 자동으로 overdue 상태 동기화 (API Route에서 호출)

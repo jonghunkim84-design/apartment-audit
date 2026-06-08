@@ -4,7 +4,7 @@
 
 export type MeetingType = 'regular' | 'subcommittee' | 'emergency' | 'ops' | 'one_on_one'
 export type MeetingStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
-export type AgendaType = 'info' | 'discussion' | 'decision' | 'review'
+export type AgendaType = 'info' | 'discussion' | 'decision' | 'review' | 'deferred'
 export type D1Classification = 'general' | 'exception' | 'crisis'
 export type LegalType = 'manager_only' | 'president_approval' | 'full_council' | 'legal_procedure'
 export type ActionStatus = 'pending' | 'in_progress' | 'completed' | 'overdue' | 'cancelled'
@@ -23,6 +23,7 @@ export const AGENDA_TYPE_LABEL: Record<AgendaType, string> = {
   discussion: '논의',
   decision:   '결정',
   review:     '실행점검',
+  deferred:   '보류',
 }
 
 export const LEGAL_TYPE_LABEL: Record<LegalType, string> = {
@@ -114,9 +115,16 @@ export interface CouncilDecision {
   d5_feedback: string | null
   legal_type: LegalType | null
   order_index: number
+  deferred_reason: string | null
+  deferred_next_meeting_at: string | null
   created_at: string
   // 조인
   actions?: CouncilAction[]
+}
+
+export interface DeferredDecision extends CouncilDecision {
+  meeting_title: string | null
+  meeting_held_at: string | null
 }
 
 export interface CouncilAction {

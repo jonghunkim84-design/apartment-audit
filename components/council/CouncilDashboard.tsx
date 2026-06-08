@@ -1,17 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { ClipboardList, Calendar, AlertTriangle, CheckCircle2, Clock, PlusCircle } from 'lucide-react'
-import type { CouncilMeeting, CouncilAction, CouncilTerm } from '@/lib/council-types'
+import { ClipboardList, Calendar, AlertTriangle, CheckCircle2, Clock, PlusCircle, Pause } from 'lucide-react'
+import type { CouncilMeeting, CouncilAction, CouncilTerm, DeferredDecision } from '@/lib/council-types'
 import { ACTION_STATUS_LABEL } from '@/lib/council-types'
 
 interface Props {
   meetings: CouncilMeeting[]
   actions: CouncilAction[]
   activeTerm: CouncilTerm | null
+  deferredDecisions: DeferredDecision[]
 }
 
-export function CouncilDashboard({ meetings, actions, activeTerm }: Props) {
+export function CouncilDashboard({ meetings, actions, activeTerm, deferredDecisions }: Props) {
   const today = new Date().toISOString().split('T')[0]
   const overdue  = actions.filter(a => a.status === 'overdue' || (a.status === 'pending' && a.due_date < today))
   const dueIn3   = actions.filter(a => {
@@ -52,7 +53,7 @@ export function CouncilDashboard({ meetings, actions, activeTerm }: Props) {
       </div>
 
       {/* KPI 카드 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <KpiCard
           label="진행 중 액션"
           value={`${inProgress.length}건`}
@@ -78,7 +79,50 @@ export function CouncilDashboard({ meetings, actions, activeTerm }: Props) {
           icon={<CheckCircle2 className="h-5 w-5 text-green-500" />}
           bg="bg-green-50"
         />
+        <KpiCard
+          label="보류 안건"
+          value={`${deferredDecisions.length}건`}
+          icon={<Pause className="h-5 w-5 text-orange-500" />}
+          bg={deferredDecisions.length > 0 ? 'bg-orange-50' : 'bg-slate-50'}
+          highlight={deferredDecisions.length > 0}
+        />
       </div>
+
+      {/* 보류 안건 목록 (있을 때만 표시) */}
+      {deferredDecisions.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-orange-100 p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Pause className="h-5 w-5 text-orange-500" />
+            <h2 className="font-semibold text-slate-800">보류 안건 ({deferredDecisions.length})</h2>
+            <span className="text-xs text-slate-400">— 다음 회의에서 재논의 필요</span>
+          </div>
+          <div className="space-y-2">
+            {deferredDecisions.map(d => (
+              <Link key={d.id} href={`/council/meetings/${d.meeting_id}`}>
+                <div className="flex items-start gap-3 p-3 bg-orange-50 rounded-xl hover:bg-orange-100 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{d.title}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {d.meeting_title}
+                      {d.meeting_held_at && (
+                        <> · {new Date(d.meeting_held_at).toLocaleDateString('ko-KR')}</>
+                      )}
+                    </p>
+                    {d.deferred_reason && (
+                      <p className="text-xs text-orange-700 mt-0.5 truncate">사유: {d.deferred_reason}</p>
+                    )}
+                  </div>
+                  {d.deferred_next_meeting_at && (
+                    <span className="shrink-0 text-xs font-medium text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                      재협의 {d.deferred_next_meeting_at}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* 다음 회의 */}
@@ -196,7 +240,7 @@ function KpiCard({ label, value, icon, bg, highlight }: {
   highlight?: boolean
 }) {
   return (
-    <div className={`${bg} rounded-2xl px-4 py-3 ${highlight ? 'ring-2 ring-red-200' : ''}`}>
+    <div className={`${bg} rounded-2xl px-4 py-3 ${highlight ? 'ring-2 ring-orange-200' : ''}`}>
       <div className="flex items-center gap-2 mb-1">{icon}</div>
       <p className="text-lg font-bold text-slate-800">{value}</p>
       <p className="text-xs text-slate-500">{label}</p>
