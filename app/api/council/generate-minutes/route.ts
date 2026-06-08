@@ -5,6 +5,35 @@ import type { AIMinutesResult } from '@/lib/council-types'
 
 export const maxDuration = 60
 
+// 503 / 과부하 오류 시 최대 3회 지수 백오프 재시도
+async function generateWithRetry(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  model: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  parts: any[],
+  maxRetries = 3
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await model.generateContent(parts)
+    } catch (err) {
+      const msg = String(err)
+      const isTransient =
+        msg.includes('503') ||
+        msg.includes('Service Unavailable') ||
+        msg.includes('high demand') ||
+        msg.includes('overloaded')
+      if (isTransient && attempt < maxRetries - 1) {
+        const delay = 1000 * Math.pow(2, attempt) // 1s → 2s → 4s
+        await new Promise(r => setTimeout(r, delay))
+        continue
+      }
+      throw err
+    }
+  }
+}
+
 const SYSTEM_PROMPT = `당신은 아파트 입주자대표회의 간사입니다.
 회의 녹음 전사 텍스트를 입력받아 4단 표준 회의록을 JSON으로 생성합니다.
 
@@ -91,7 +120,7 @@ due_date_hint는 회의 날짜 이후의 현실적인 기한으로 설정하세�
 === 전사 텍스트 ===
 ${transcript.slice(0, 30000)}`
 
-    const result = await model.generateContent([
+    const result = await generateWithRetry(model, [
       { text: SYSTEM_PROMPT },
       { text: userPrompt },
     ])
@@ -114,6 +143,18 @@ ${transcript.slice(0, 30000)}`
     return NextResponse.json({ result: parsed })
   } catch (err) {
     console.error('[council/generate-minutes]', err)
+    const msg = String(err)
+    const isTransient =
+      msg.includes('503') ||
+      msg.includes('Service Unavailable') ||
+      msg.includes('high demand') ||
+      msg.includes('overloaded')
+    if (isTransient) {
+      return NextResponse.json(
+        { error: 'AI 서버가 일시적으로 과부하 상태입니다. 잠시 후 다시 시도해주세요. (Gemini 503)' },
+        { status: 503 }
+      )
+    }
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
